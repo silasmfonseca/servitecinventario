@@ -36,18 +36,16 @@ COLUMN_WIDTHS = {
     "status": 200, "condicao": 200, "tipo_computador": 150, "computador_liga": 150, 
     "observacoes": 250, "modificado_em": 150, "modificado_por": 250
 }
-TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
+TABLE_WIDTH = sum(v for k, v in COLUMN_WIDTHS.items() if k in COLUNAS or k == 'checkbox')
 
 def main(page: ft.Page):
     page.title = "Gerenciamento de Equipamentos Servitec"
     page.theme_mode = "light"
-    # MUDANÇA: Adicionado padding para o conteúdo não colar nas bordas
-    page.padding = ft.padding.all(20)
+    page.padding = 20
     page.bgcolor = "#f0f2f5"
 
     user_info = {"email": None}
 
-    # MUDANÇA: Funções de credenciais para a web
     def salvar_credenciais(email, password):
         page.client_storage.set("auth.email", email.strip())
         page.client_storage.set("auth.password", password.strip())
@@ -65,16 +63,15 @@ def main(page: ft.Page):
         page.client_storage.remove("auth.email")
         page.client_storage.remove("auth.password")
 
-    # MUDANÇA: Carregamento da imagem para a web
     bg_image = ft.Image(src="banner_servitec.png", fit=ft.ImageFit.COVER, expand=True)
 
-    # --- Lógica da Interface (Seu código original) ---
+    # --- Lógica da Interface ---
     itens_selecionados = []
     
     header_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"])]
     for col in COLUNAS:
-        if col in COLUMN_WIDTHS: # Garante que só colunas com largura definida entrem
-            header_controls.append(ft.Container(content=ft.Text(COLUNAS_LABEL[col], weight=ft.FontWeight.BOLD, color="black54"), width=COLUMN_WIDTHS[col], alignment=ft.alignment.center))
+        if col in COLUMN_WIDTHS:
+            header_controls.append(ft.Container(content=ft.Text(COLUNAS_LABEL.get(col, col), weight=ft.FontWeight.BOLD, color="black54"), width=COLUMN_WIDTHS[col], alignment=ft.alignment.center))
     header = ft.Container(content=ft.Row(controls=header_controls, spacing=0), bgcolor="#f0f2f5", height=40)
     
     body_list = ft.ListView(expand=True, spacing=2)
@@ -96,7 +93,7 @@ def main(page: ft.Page):
             row_container.bgcolor = row_container.data.get("original_color")
         row_container.update()
         atualizar_estado_botoes()
-
+        
     def fechar_dialog(e):
         page.dialog.open = False
         page.update()
@@ -113,14 +110,13 @@ def main(page: ft.Page):
             sao_paulo_tz = pytz.timezone("America/Sao_Paulo")
             return utc_dt.astimezone(sao_paulo_tz).strftime("%d/%m/%Y %H:%M")
         except: return iso_string
-
-    def carregar_dados(query=None):
+        
+    def carregar_dados(e=None):
         try:
             body_list.controls.clear()
             itens_selecionados.clear()
             atualizar_estado_botoes()
-            if query is None:
-                query = supabase.table("inventario").select("*").order("patrimonio")
+            query = supabase.table("inventario").select("*").order("patrimonio")
             registros = query.execute().data or []
             
             for i, item in enumerate(registros):
@@ -143,56 +139,53 @@ def main(page: ft.Page):
             page.update()
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
-    
-    # --- UI Principal ---
+
+    # --- UI Principal (Layout Fiel ao Original) ---
     filtrar_dropdown = ft.Dropdown(label="Filtrar por", width=220, options=[ft.dropdown.Option(opt) for opt in ["Todas as Colunas"] + list(COLUNAS_LABEL.values())], value="Todas as Colunas")
     localizar_input = ft.TextField(label="Localizar", width=220)
-    buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=lambda e: carregar_dados()) # A lógica de busca precisa ser implementada
+    buscar_btn = ft.ElevatedButton("Buscar", icon="search")
     limpar_btn = ft.ElevatedButton("Limpar", icon="clear")
-    atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=lambda e: carregar_dados())
+    atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
+    
+    # Suas funções `abrir_formulario` e `excluir_selecionado` precisam ser coladas aqui
+    def abrir_formulario(modo): pass
+    def excluir_selecionado(e): pass
     
     add_btn = ft.ElevatedButton("Adicionar Novo", icon="add", on_click=lambda e: abrir_formulario("add"))
-    edit_btn = ft.ElevatedButton("Editar Selecionado", icon="edit", disabled=True)
-    delete_btn = ft.ElevatedButton("Excluir Selecionado", icon="delete", disabled=True)
+    edit_btn = ft.ElevatedButton("Editar Selecionado", icon="edit", disabled=True, on_click=lambda e: abrir_formulario("edit"))
+    delete_btn = ft.ElevatedButton("Excluir Selecionado", icon="delete", disabled=True, on_click=excluir_selecionado)
 
-    # RESTAURADO: Seu layout original com painéis flutuantes e scroll
-    main_view = ft.Stack(
+    # CORREÇÃO: Usando a estrutura de containers e rolagem do seu app original
+    main_view = ft.Column(
         [
-            ft.Column(
+            ft.Row(
                 [
-                    ft.Container(
-                        content=ft.Row(
-                            [
-                                filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn
-                            ],
-                            alignment=ft.MainAxisAlignment.START
-                        ),
-                        padding=20,
-                        bgcolor="white",
-                        border_radius=8
-                    ),
-                    ft.Container(
-                        content=ft.Row(
-                            [
-                                add_btn, edit_btn, delete_btn
-                            ],
-                            alignment=ft.MainAxisAlignment.END
-                        ),
-                        padding=ft.padding.only(top=10)
-                    ),
-                    ft.Container(
-                        content=ft.Row(
-                            [
-                                ft.Column([header, body_list], expand=True, scroll=ft.ScrollMode.ADAPTIVE)
-                            ],
-                            scroll=ft.ScrollMode.ADAPTIVE, # Garante a rolagem horizontal
-                        ),
-                        expand=True,
-                        bgcolor="white",
-                        border_radius=8,
-                        padding=10
-                    )
-                ]
+                    filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn
+                ],
+                alignment=ft.MainAxisAlignment.START
+            ),
+            ft.Row(
+                [
+                    add_btn, edit_btn, delete_btn
+                ],
+                alignment=ft.MainAxisAlignment.END
+            ),
+            ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Column(
+                            [header, body_list], 
+                            width=TABLE_WIDTH, 
+                            scroll=ft.ScrollMode.ADAPTIVE # Rolagem vertical da lista
+                        )
+                    ],
+                    scroll=ft.ScrollMode.ADAPTIVE, # Rolagem horizontal da linha
+                    expand=True,
+                ),
+                expand=True,
+                bgcolor="rgba(255, 255, 255, 0.85)", # Fundo branco semi-transparente
+                border_radius=8,
+                padding=10
             )
         ],
         expand=True,
@@ -225,10 +218,20 @@ def main(page: ft.Page):
             error_text.visible = True
             page.update()
 
-    login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login), error_text]), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
-    login_view = ft.Stack([bg_image, ft.Container(content=login_form, alignment=ft.alignment.center)], expand=True)
+    login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30, weight=ft.FontWeight.BOLD), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login)], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
+    login_view = ft.Container(content=login_form, alignment=ft.alignment.center, expand=True, visible=True)
 
-    page.add(login_view, main_view)
+    # CORREÇÃO: A estrutura da página agora é uma Pilha (Stack) para ter o fundo
+    page.add(
+        ft.Stack(
+            [
+                bg_image,
+                login_view,
+                main_view,
+            ]
+        )
+    )
+    
     carregar_credenciais()
 
 # --- Bloco de Execução para WEB ---
@@ -238,7 +241,7 @@ if __name__ == "__main__":
     ft.app(
         target=main,
         view=ft.AppView.WEB_BROWSER,
-        assets_dir="assets", # Flet vai procurar a imagem aqui
+        assets_dir="assets",
         host="0.0.0.0",
         port=port
     )
