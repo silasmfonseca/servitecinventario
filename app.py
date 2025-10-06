@@ -33,7 +33,6 @@ DROPDOWN_OPTIONS = {
 # --- Lógica de Autenticação ---
 
 def login_required(f):
-    """ Decorator para proteger rotas que exigem login. """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
@@ -43,7 +42,6 @@ def login_required(f):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """ Rota para a página de login e para processar o login. """
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -59,12 +57,11 @@ def login():
 
 @app.route('/logout')
 def logout():
-    """ Rota para fazer logout. """
     session.clear()
     return redirect(url_for('login'))
 
 
-# --- Rotas da Aplicação (Agora Protegidas) ---
+# --- Rotas da Aplicação (Protegidas) ---
 
 @app.route('/')
 @login_required
