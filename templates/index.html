@@ -18,29 +18,23 @@
             background-color: var(--page-bg);
             font-family: 'Roboto', sans-serif;
         }
+        /* CORREÇÃO: Banner agora apenas exibe a imagem, sem texto HTML por cima */
         .banner {
             background-color: #e9ecef;
             background-image: url('/static/images/banner_servitec.png');
-            background-size: contain;
-            background-position: center right;
+            background-size: cover; /* Usa 'cover' para preencher melhor */
+            background-position: center center;
             background-repeat: no-repeat;
-            padding: 4rem 2rem;
-            min-height: 300px;
+            min-height: 250px; /* Altura ajustada */
         }
-        .banner-title {
-            font-size: 3.5rem;
-            font-weight: 700;
-            color: var(--servitec-purple);
-            line-height: 1.2;
-        }
+        
+        /* CORREÇÃO: Removido o 'margin-top' negativo que quebrava o layout */
         .control-panel, .table-panel {
             background-color: #ffffff;
             padding: 1.5rem;
             border-radius: 0.5rem;
             border: 1px solid #dee2e6;
-            margin-top: -50px; /* Efeito de sobreposição */
-            position: relative;
-            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .table {
             white-space: nowrap;
@@ -53,18 +47,10 @@
     </style>
 </head>
 <body>
-    <div class="banner">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <h1 class="banner-title">Tecnologia que<br>move o seu<br>negócio.</h1>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="banner shadow-sm"></div>
 
-    <div class="container">
-        <div class="control-panel shadow-sm mb-4">
+    <div class="container mt-4">
+        <div class="control-panel mb-4">
             <div class="d-flex flex-wrap justify-content-between align-items-center">
                 <div class="d-flex flex-wrap align-items-end gap-2">
                     <div class="">
@@ -90,7 +76,7 @@
             </div>
         </div>
 
-        <div class="table-responsive table-panel shadow-sm">
+        <div class="table-responsive table-panel">
              <table class="table table-hover table-striped mb-0">
                 <thead class="table-light">
                     <tr>
