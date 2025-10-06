@@ -7,12 +7,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; }
-        .container { margin-top: 30px; }
+        .container-xl { margin-top: 30px; }
         .table-hover tbody tr:hover { cursor: pointer; }
+        .modal-body { max-height: 60vh; overflow-y: auto; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container-xl">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1>Inventário Servitec</h1>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
@@ -21,14 +22,16 @@
         </div>
 
         <div class="table-responsive">
-            <table class="table table-bordered table-hover">
+            <table class="table table-bordered table-hover table-striped">
                 <thead class="table-light">
                     <tr>
                         <th>Patrimônio</th>
                         <th>Marca</th>
                         <th>Modelo</th>
+                        <th>Nº de Série</th>
                         <th>Proprietário</th>
                         <th>Status</th>
+                        <th>Condição</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -38,13 +41,15 @@
                         <td>{{ item.patrimonio }}</td>
                         <td>{{ item.marca }}</td>
                         <td>{{ item.modelo }}</td>
+                        <td>{{ item.numero_serie }}</td>
                         <td>{{ item.proprietario }}</td>
                         <td>{{ item.status }}</td>
+                        <td>{{ item.condicao }}</td>
                         <td>
                             <button class="btn btn-sm btn-warning edit-btn" 
                                     data-bs-toggle="modal" 
                                     data-bs-target="#editModal"
-                                    data-item='{{ item | tojson }}'>
+                                    data-item='{{ item | tojson | forceescape }}'>
                                 Editar
                             </button>
                             <button class="btn btn-sm btn-danger delete-btn" 
@@ -57,7 +62,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center">Nenhum item encontrado.</td>
+                        <td colspan="8" class="text-center">Nenhum item encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -66,7 +71,7 @@
     </div>
 
     <div class="modal fade" id="addModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form action="/add" method="POST">
                     <div class="modal-header">
@@ -74,25 +79,69 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Patrimônio</label>
-                            <input type="text" class="form-control" name="patrimonio" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Patrimônio</label>
+                                <input type="text" class="form-control" name="patrimonio" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nº de Série</label>
+                                <input type="text" class="form-control" name="numero_serie">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Marca</label>
+                                <select class="form-select" name="marca">
+                                    {% for option in dropdown_options.marca %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" name="modelo">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Proprietário</label>
+                                <select class="form-select" name="proprietario">
+                                     {% for option in dropdown_options.proprietario %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" name="status">
+                                     {% for option in dropdown_options.status %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Computador</label>
+                                <select class="form-select" name="tipo_computador">
+                                     {% for option in dropdown_options.tipo_computador %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Condição da Carcaça</label>
+                                <select class="form-select" name="condicao">
+                                     {% for option in dropdown_options.condicao %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Marca</label>
-                            <input type="text" class="form-control" name="marca">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Modelo</label>
-                            <input type="text" class="form-control" name="modelo">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Proprietário</label>
-                            <input type="text" class="form-control" name="proprietario">
-                        </div>
-                         <div class="mb-3">
-                            <label class="form-label">Status</label>
-                            <input type="text" class="form-control" name="status">
+                            <label class="form-label">Observações</label>
+                            <textarea class="form-control" name="observacoes" rows="3"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -105,7 +154,7 @@
     </div>
 
     <div class="modal fade" id="editModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form id="editForm" method="POST">
                     <div class="modal-header">
@@ -113,26 +162,69 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <input type="hidden" id="edit_patrimonio_original" name="patrimonio_original">
-                        <div class="mb-3">
-                            <label class="form-label">Patrimônio</label>
-                            <input type="text" class="form-control" id="edit_patrimonio" name="patrimonio" readonly>
+                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Patrimônio</label>
+                                <input type="text" class="form-control" id="edit_patrimonio" name="patrimonio" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nº de Série</label>
+                                <input type="text" class="form-control" id="edit_numero_serie" name="numero_serie">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Marca</label>
+                                <select class="form-select" id="edit_marca" name="marca">
+                                    {% for option in dropdown_options.marca %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" id="edit_modelo" name="modelo">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Proprietário</label>
+                                <select class="form-select" id="edit_proprietario" name="proprietario">
+                                     {% for option in dropdown_options.proprietario %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="edit_status" name="status">
+                                     {% for option in dropdown_options.status %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Computador</label>
+                                <select class="form-select" id="edit_tipo_computador" name="tipo_computador">
+                                     {% for option in dropdown_options.tipo_computador %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Condição da Carcaça</label>
+                                <select class="form-select" id="edit_condicao" name="condicao">
+                                     {% for option in dropdown_options.condicao %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Marca</label>
-                            <input type="text" class="form-control" id="edit_marca" name="marca">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Modelo</label>
-                            <input type="text" class="form-control" id="edit_modelo" name="modelo">
-                        </div>
-                         <div class="mb-3">
-                            <label class="form-label">Proprietário</label>
-                            <input type="text" class="form-control" id="edit_proprietario" name="proprietario">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Status</label>
-                            <input type="text" class="form-control" id="edit_status" name="status">
+                            <label class="form-label">Observações</label>
+                            <textarea class="form-control" id="edit_observacoes" name="observacoes" rows="3"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -166,20 +258,26 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Script para preencher o modal de edição
+        // Script para preencher o modal de edição dinamicamente
         const editModal = document.getElementById('editModal');
         editModal.addEventListener('show.bs.modal', event => {
             const button = event.relatedTarget;
-            const item = JSON.parse(button.getAttribute('data-item'));
+            const itemJson = button.getAttribute('data-item').replace(/'/g, '"');
+            const item = JSON.parse(itemJson);
             
             const modalForm = editModal.querySelector('form');
             modalForm.action = `/edit/${item.patrimonio}`;
 
-            editModal.querySelector('#edit_patrimonio').value = item.patrimonio;
-            editModal.querySelector('#edit_marca').value = item.marca;
-            editModal.querySelector('#edit_modelo').value = item.modelo;
-            editModal.querySelector('#edit_proprietario').value = item.proprietario;
-            editModal.querySelector('#edit_status').value = item.status;
+            // Preenche todos os campos do formulário de edição
+            editModal.querySelector('#edit_patrimonio').value = item.patrimonio || '';
+            editModal.querySelector('#edit_numero_serie').value = item.numero_serie || '';
+            editModal.querySelector('#edit_marca').value = item.marca || '';
+            editModal.querySelector('#edit_modelo').value = item.modelo || '';
+            editModal.querySelector('#edit_proprietario').value = item.proprietario || '';
+            editModal.querySelector('#edit_status').value = item.status || '';
+            editModal.querySelector('#edit_tipo_computador').value = item.tipo_computador || '';
+            editModal.querySelector('#edit_condicao').value = item.condicao || '';
+            editModal.querySelector('#edit_observacoes').value = item.observacoes || '';
         });
 
         // Script para preencher o modal de exclusão
