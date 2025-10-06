@@ -12,26 +12,32 @@
     <style>
         :root {
             --servitec-purple: #6c5ce7;
-            --servitec-light-gray: #f8f9fa;
+            --servitec-light-gray: #f0f2f5; /* Tom de cinza do fundo original */
         }
         body { 
-            background-color: var(--servitec-light-gray);
+            /* A imagem de fundo é carregada da pasta static/images */
+            background-image: url('/static/images/banner_servitec.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed; /* Mantém a imagem fixa durante a rolagem */
             font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
         }
-        .header-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--servitec-purple);
+        .main-container {
+            padding-top: 40px;
+            padding-bottom: 40px;
         }
-        .filter-bar {
-            background-color: #fff;
-            padding: 1rem;
-            border-radius: 0.5rem;
+        /* Painéis flutuantes */
+        .floating-panel {
+            background-color: rgba(255, 255, 255, 0.95); /* Fundo branco semi-transparente */
+            padding: 1.5rem;
+            border-radius: 0.75rem;
             border: 1px solid #dee2e6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
         .table {
-            border: 1px solid #dee2e6;
-            white-space: nowrap; /* Impede que o texto quebre nas células */
+            white-space: nowrap;
         }
         .btn-primary {
             background-color: var(--servitec-purple);
@@ -48,41 +54,38 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid my-4 px-4">
+    <div class="container-fluid main-container px-4">
         
-        <header class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
-            <h1 class="header-title">Tecnologia que move o seu negócio.</h1>
-            <div>
-                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addModal">
-                    + Adicionar Novo
-                </button>
+        <div class="floating-panel mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-9">
+                    <form class="row g-3 align-items-end">
+                        <div class="col-sm-4">
+                            <label for="filterColumn" class="form-label">Filtrar por</label>
+                            <select id="filterColumn" class="form-select">
+                                <option selected>Todas as Colunas</option>
+                                <option>Patrimônio</option>
+                                <option>Marca</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="searchText" class="form-label">Localizar</label>
+                            <input type="text" class="form-control" id="searchText">
+                        </div>
+                        <div class="col-sm-2">
+                             <button type="submit" class="btn btn-outline-primary w-100">Buscar</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-3 text-end">
+                     <button class="btn btn-primary btn-lg mt-3 mt-md-0" data-bs-toggle="modal" data-bs-target="#addModal">
+                        + Adicionar Novo
+                    </button>
+                </div>
             </div>
-        </header>
-
-        <div class="filter-bar mb-4">
-            <form class="row g-3 align-items-center">
-                <div class="col-md-3">
-                    <label for="filterColumn" class="form-label">Filtrar por</label>
-                    <select id="filterColumn" class="form-select">
-                        <option selected>Todas as Colunas</option>
-                        <option>Patrimônio</option>
-                        <option>Marca</option>
-                        <option>Modelo</option>
-                        <option>Nº de Série</option>
-                        <option>Proprietário</option>
-                    </select>
-                </div>
-                <div class="col-md-7">
-                    <label for="searchText" class="form-label">Localizar</label>
-                    <input type="text" class="form-control" id="searchText" placeholder="Digite para buscar...">
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-outline-primary w-100">Buscar</button>
-                </div>
-            </form>
         </div>
 
-        <div class="table-responsive bg-white rounded shadow-sm">
+        <div class="table-responsive floating-panel">
             <table class="table table-bordered table-hover table-striped mb-0">
                 <thead class="table-light">
                     <tr>
@@ -94,14 +97,9 @@
                         <th>Status</th>
                         <th>Condição da Carcaça</th>
                         <th>Tipo de Computador</th>
-                        <th>Computador Liga?</th>
-                        <th>Tipo HD/SSD</th>
-                        <th>Tamanho HD/SSD</th>
-                        <th>Tipo Memória RAM</th>
-                        <th>Tamanho Memória RAM</th>
-                        <th>Possui Bateria?</th>
-                        <th>Teclado Funciona?</th>
                         <th>Observações</th>
+                        <th>Última Edição</th>
+                        <th>Editado Por</th>
                         <th class="text-center">Ações</th>
                     </tr>
                 </thead>
@@ -116,14 +114,9 @@
                         <td>{{ item.status }}</td>
                         <td>{{ item.condicao }}</td>
                         <td>{{ item.tipo_computador }}</td>
-                        <td>{{ item.computador_liga }}</td>
-                        <td>{{ item.hd }}</td>
-                        <td>{{ item.hd_tamanho }}</td>
-                        <td>{{ item.ram_tipo }}</td>
-                        <td>{{ item.ram_tamanho }}</td>
-                        <td>{{ item.bateria }}</td>
-                        <td>{{ item.teclado_funciona }}</td>
                         <td>{{ item.observacoes }}</td>
+                        <td>{{ item.modificado_em | default('N/A', true) }}</td>
+                        <td>{{ item.modificado_por | default('N/A', true) }}</td>
                         <td class="text-center">
                             <button class="btn btn-sm btn-warning edit-btn" 
                                     data-bs-toggle="modal" 
@@ -141,13 +134,13 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="17" class="text-center">Nenhum item encontrado.</td>
+                        <td colspan="12" class="text-center">Nenhum item encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <footer class="text-center text-muted mt-4">
+        <footer class="text-center text-white mt-4">
             <p>Desenvolvido por Silas Fonseca</p>
         </footer>
     </div>
@@ -344,7 +337,6 @@
         const editModal = document.getElementById('editModal');
         editModal.addEventListener('show.bs.modal', event => {
             const button = event.relatedTarget;
-            // Corrigido para lidar com aspas escapadas
             const itemJson = button.getAttribute('data-item').replace(/&quot;/g, '"');
             const item = JSON.parse(itemJson);
             
