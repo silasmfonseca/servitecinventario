@@ -34,12 +34,12 @@ DROPDOWN_OPTIONS = {
 def home():
     """ Rota principal: busca todos os itens e exibe na tabela. """
     try:
-        response = supabase.table('inventario').select('*').order('patrimonio').execute()
+        # MUDANÇA: Ordenando pela data de modificação, do mais recente para o mais antigo
+        response = supabase.table('inventario').select('*').order('modificado_em', desc=True).execute()
         inventario = response.data
     except Exception as e:
         print(f"Erro ao buscar dados: {e}")
         inventario = []
-    # Passamos os itens do inventário E as opções dos dropdowns para o HTML
     return render_template('index.html', inventario=inventario, dropdown_options=DROPDOWN_OPTIONS)
 
 @app.route('/add', methods=['POST'])
@@ -56,7 +56,7 @@ def add_item():
             'condicao': request.form.get('condicao'),
             'tipo_computador': request.form.get('tipo_computador'),
             'observacoes': request.form.get('observacoes'),
-            'modificado_por': 'webapp'
+            'modificado_por': 'webapp' # No futuro, pode ser o email do usuário logado
         }
         supabase.table('inventario').insert(novo_item).execute()
     except Exception as e:
@@ -76,7 +76,7 @@ def edit_item(patrimonio):
             'condicao': request.form.get('condicao'),
             'tipo_computador': request.form.get('tipo_computador'),
             'observacoes': request.form.get('observacoes'),
-            'modificado_por': 'webapp'
+            'modificado_por': 'webapp' # No futuro, pode ser o email do usuário logado
         }
         supabase.table('inventario').update(item_atualizado).eq('patrimonio', patrimonio).execute()
     except Exception as e:
