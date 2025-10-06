@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Inventário</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { margin-top: 30px; }
+        .table-hover tbody tr:hover { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Inventário Servitec</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+                + Adicionar Novo
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patrimônio</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Proprietário</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventario %}
+                    <tr>
+                        <td>{{ item.patrimonio }}</td>
+                        <td>{{ item.marca }}</td>
+                        <td>{{ item.modelo }}</td>
+                        <td>{{ item.proprietario }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning edit-btn" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editModal"
+                                    data-item='{{ item | tojson }}'>
+                                Editar
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-btn" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#deleteModal"
+                                    data-patrimonio="{{ item.patrimonio }}">
+                                Excluir
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">Nenhum item encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/add" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Adicionar Novo Equipamento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Patrimônio</label>
+                            <input type="text" class="form-control" name="patrimonio" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Marca</label>
+                            <input type="text" class="form-control" name="marca">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" class="form-control" name="modelo">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Proprietário</label>
+                            <input type="text" class="form-control" name="proprietario">
+                        </div>
+                         <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <input type="text" class="form-control" name="status">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="editForm" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Equipamento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_patrimonio_original" name="patrimonio_original">
+                        <div class="mb-3">
+                            <label class="form-label">Patrimônio</label>
+                            <input type="text" class="form-control" id="edit_patrimonio" name="patrimonio" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Marca</label>
+                            <input type="text" class="form-control" id="edit_marca" name="marca">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" class="form-control" id="edit_modelo" name="modelo">
+                        </div>
+                         <div class="mb-3">
+                            <label class="form-label">Proprietário</label>
+                            <input type="text" class="form-control" id="edit_proprietario" name="proprietario">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <input type="text" class="form-control" id="edit_status" name="status">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="deleteForm" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar Exclusão</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Tem certeza que deseja excluir o item <strong id="deletePatrimonioText"></strong>?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger">Excluir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Script para preencher o modal de edição
+        const editModal = document.getElementById('editModal');
+        editModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+            const item = JSON.parse(button.getAttribute('data-item'));
+            
+            const modalForm = editModal.querySelector('form');
+            modalForm.action = `/edit/${item.patrimonio}`;
+
+            editModal.querySelector('#edit_patrimonio').value = item.patrimonio;
+            editModal.querySelector('#edit_marca').value = item.marca;
+            editModal.querySelector('#edit_modelo').value = item.modelo;
+            editModal.querySelector('#edit_proprietario').value = item.proprietario;
+            editModal.querySelector('#edit_status').value = item.status;
+        });
+
+        // Script para preencher o modal de exclusão
+        const deleteModal = document.getElementById('deleteModal');
+        deleteModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+            const patrimonio = button.getAttribute('data-patrimonio');
+            
+            const modalForm = deleteModal.querySelector('form');
+            modalForm.action = `/delete/${patrimonio}`;
+            
+            deleteModal.querySelector('#deletePatrimonioText').textContent = patrimonio;
+        });
+    </script>
+</body>
+</html>
