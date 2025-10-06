@@ -12,15 +12,14 @@
     <style>
         :root {
             --servitec-purple: #6c5ce7;
-            --servitec-light-gray: #f0f2f5; /* Tom de cinza do fundo original */
+            --servitec-light-gray: #f0f2f5;
         }
         body { 
-            /* A imagem de fundo é carregada da pasta static/images */
             background-image: url('/static/images/banner_servitec.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            background-attachment: fixed; /* Mantém a imagem fixa durante a rolagem */
+            background-attachment: fixed;
             font-family: 'Roboto', sans-serif;
             min-height: 100vh;
         }
@@ -28,9 +27,8 @@
             padding-top: 40px;
             padding-bottom: 40px;
         }
-        /* Painéis flutuantes */
         .floating-panel {
-            background-color: rgba(255, 255, 255, 0.95); /* Fundo branco semi-transparente */
+            background-color: rgba(255, 255, 255, 0.95);
             padding: 1.5rem;
             border-radius: 0.75rem;
             border: 1px solid #dee2e6;
@@ -58,29 +56,15 @@
         
         <div class="floating-panel mb-4">
             <div class="row align-items-center">
-                <div class="col-md-9">
+                <div class="col-md-8">
                     <form class="row g-3 align-items-end">
-                        <div class="col-sm-4">
-                            <label for="filterColumn" class="form-label">Filtrar por</label>
-                            <select id="filterColumn" class="form-select">
-                                <option selected>Todas as Colunas</option>
-                                <option>Patrimônio</option>
-                                <option>Marca</option>
-                            </select>
-                        </div>
-                        <div class="col-sm-6">
-                            <label for="searchText" class="form-label">Localizar</label>
-                            <input type="text" class="form-control" id="searchText">
-                        </div>
-                        <div class="col-sm-2">
-                             <button type="submit" class="btn btn-outline-primary w-100">Buscar</button>
-                        </div>
-                    </form>
+                         </form>
                 </div>
-                <div class="col-md-3 text-end">
-                     <button class="btn btn-primary btn-lg mt-3 mt-md-0" data-bs-toggle="modal" data-bs-target="#addModal">
+                <div class="col-md-4 text-end">
+                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
                         + Adicionar Novo
                     </button>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-2">Sair</a>
                 </div>
             </div>
         </div>
@@ -95,8 +79,7 @@
                         <th>Nº de Série</th>
                         <th>Proprietário</th>
                         <th>Status</th>
-                        <th>Condição da Carcaça</th>
-                        <th>Tipo de Computador</th>
+                        <th>Condição</th>
                         <th>Observações</th>
                         <th>Última Edição</th>
                         <th>Editado Por</th>
@@ -113,7 +96,6 @@
                         <td>{{ item.proprietario }}</td>
                         <td>{{ item.status }}</td>
                         <td>{{ item.condicao }}</td>
-                        <td>{{ item.tipo_computador }}</td>
                         <td>{{ item.observacoes }}</td>
                         <td>{{ item.modificado_em | default('N/A', true) }}</td>
                         <td>{{ item.modificado_por | default('N/A', true) }}</td>
@@ -134,7 +116,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="12" class="text-center">Nenhum item encontrado.</td>
+                        <td colspan="11" class="text-center">Nenhum item encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -145,227 +127,6 @@
         </footer>
     </div>
 
-    <div class="modal fade" id="addModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form action="/add" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Adicionar Novo Equipamento</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Patrimônio</label>
-                                <input type="text" class="form-control" name="patrimonio" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nº de Série</label>
-                                <input type="text" class="form-control" name="numero_serie">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Marca</label>
-                                <select class="form-select" name="marca">
-                                    {% for option in dropdown_options.marca %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Modelo</label>
-                                <input type="text" class="form-control" name="modelo">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Proprietário</label>
-                                <select class="form-select" name="proprietario">
-                                     {% for option in dropdown_options.proprietario %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" name="status">
-                                     {% for option in dropdown_options.status %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Tipo de Computador</label>
-                                <select class="form-select" name="tipo_computador">
-                                     {% for option in dropdown_options.tipo_computador %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Condição da Carcaça</label>
-                                <select class="form-select" name="condicao">
-                                     {% for option in dropdown_options.condicao %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Observações</label>
-                            <textarea class="form-control" name="observacoes" rows="3"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="editModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form id="editForm" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Editar Equipamento</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Patrimônio</label>
-                                <input type="text" class="form-control" id="edit_patrimonio" name="patrimonio" readonly>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nº de Série</label>
-                                <input type="text" class="form-control" id="edit_numero_serie" name="numero_serie">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Marca</label>
-                                <select class="form-select" id="edit_marca" name="marca">
-                                    {% for option in dropdown_options.marca %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Modelo</label>
-                                <input type="text" class="form-control" id="edit_modelo" name="modelo">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Proprietário</label>
-                                <select class="form-select" id="edit_proprietario" name="proprietario">
-                                     {% for option in dropdown_options.proprietario %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" id="edit_status" name="status">
-                                     {% for option in dropdown_options.status %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Tipo de Computador</label>
-                                <select class="form-select" id="edit_tipo_computador" name="tipo_computador">
-                                     {% for option in dropdown_options.tipo_computador %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Condição da Carcaça</label>
-                                <select class="form-select" id="edit_condicao" name="condicao">
-                                     {% for option in dropdown_options.condicao %}
-                                    <option value="{{ option }}">{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Observações</label>
-                            <textarea class="form-control" id="edit_observacoes" name="observacoes" rows="3"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="deleteModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form id="deleteForm" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Confirmar Exclusão</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Tem certeza que deseja excluir o item <strong id="deletePatrimonioText"></strong>?</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-danger">Excluir</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Script para preencher o modal de edição dinamicamente
-        const editModal = document.getElementById('editModal');
-        editModal.addEventListener('show.bs.modal', event => {
-            const button = event.relatedTarget;
-            const itemJson = button.getAttribute('data-item').replace(/&quot;/g, '"');
-            const item = JSON.parse(itemJson);
-            
-            const modalForm = editModal.querySelector('form');
-            modalForm.action = `/edit/${item.patrimonio}`;
-
-            // Preenche todos os campos do formulário de edição
-            editModal.querySelector('#edit_patrimonio').value = item.patrimonio || '';
-            editModal.querySelector('#edit_numero_serie').value = item.numero_serie || '';
-            editModal.querySelector('#edit_marca').value = item.marca || '';
-            editModal.querySelector('#edit_modelo').value = item.modelo || '';
-            editModal.querySelector('#edit_proprietario').value = item.proprietario || '';
-            editModal.querySelector('#edit_status').value = item.status || '';
-            editModal.querySelector('#edit_tipo_computador').value = item.tipo_computador || '';
-            editModal.querySelector('#edit_condicao').value = item.condicao || '';
-            editModal.querySelector('#edit_observacoes').value = item.observacoes || '';
-        });
-
-        // Script para preencher o modal de exclusão
-        const deleteModal = document.getElementById('deleteModal');
-        deleteModal.addEventListener('show.bs.modal', event => {
-            const button = event.relatedTarget;
-            const patrimonio = button.getAttribute('data-patrimonio');
-            
-            const modalForm = deleteModal.querySelector('form');
-            modalForm.action = `/delete/${patrimonio}`;
-            
-            deleteModal.querySelector('#deletePatrimonioText').textContent = patrimonio;
-        });
-    </script>
-</body>
+    </body>
 </html>
