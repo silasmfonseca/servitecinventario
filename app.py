@@ -7,7 +7,6 @@ from functools import wraps
 app = Flask(__name__)
 
 # IMPORTANTE: Configura a chave secreta para a sessão de login
-# Vamos adicionar essa variável no Render
 app.secret_key = os.getenv("SECRET_KEY")
 
 # Conexão com Supabase
@@ -17,7 +16,17 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Opções dos Dropdowns
 DROPDOWN_OPTIONS = {
-    # ... seu dicionário de opções continua aqui ...
+    "proprietario": [
+        "Capital Company", "Conmedi - Jardins", "Conmedi - Mauá", "Conmedi - Osaco", 
+        "Conmedi - Paulista", "Conmedi - Ribeirão Pires", "Conmedi - Santo Amaro", 
+        "Conmedi - Santo André", "Conmedi - São Caetano", "Conmedi - Vila Matilde", 
+        "Engrecon", "Engrecon - BPN", "Inova Contabildiade", "MIMO", "Pro Saúde", 
+        "Rede Gaya", "Quattro Construtora", "Sealset", "Servitec - Locação", "SL Assessoria", "Super Brilho"
+    ],
+    "status": ["Está na Servitec", "KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada", "Está com o proprietário"],
+    "marca": ["Apple", "Acer", "Dell", "HP", "Lenovo", "Positivo", "Samsung"],
+    "condicao": ["Nova", "Estado de Nova", "Estado de Nova (Com avarias)", "Boa", "Quebrada"],
+    "tipo_computador": ["Desktop", "Notebook"],
 }
 
 
@@ -39,28 +48,26 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         try:
-            # Usa a autenticação do Supabase
             user_session = supabase.auth.sign_in_with_password({"email": email, "password": password})
-            session['user'] = user_session.user.email # Armazena o email do usuário na sessão
+            session['user'] = user_session.user.email
             return redirect(url_for('home'))
         except Exception:
-            flash('Email ou senha inválidos.') # Mostra uma mensagem de erro
+            flash('Email ou senha inválidos.')
             return redirect(url_for('login'))
     
-    # Se for GET, apenas mostra a página de login
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
     """ Rota para fazer logout. """
-    session.clear() # Limpa a sessão
+    session.clear()
     return redirect(url_for('login'))
 
 
 # --- Rotas da Aplicação (Agora Protegidas) ---
 
 @app.route('/')
-@login_required # Protege a rota principal
+@login_required
 def home():
     try:
         response = supabase.table('inventario').select('*').order('modificado_em', desc=True).execute()
@@ -71,7 +78,7 @@ def home():
     return render_template('index.html', inventario=inventario, dropdown_options=DROPDOWN_OPTIONS)
 
 @app.route('/add', methods=['POST'])
-@login_required # Protege a rota de adicionar
+@login_required
 def add_item():
     try:
         novo_item = { 'patrimonio': request.form.get('patrimonio'), 'marca': request.form.get('marca'), 'modelo': request.form.get('modelo'), 'numero_serie': request.form.get('numero_serie'), 'proprietario': request.form.get('proprietario'), 'status': request.form.get('status'), 'condicao': request.form.get('condicao'), 'tipo_computador': request.form.get('tipo_computador'), 'observacoes': request.form.get('observacoes'), 'modificado_por': session.get('user') }
@@ -81,7 +88,7 @@ def add_item():
     return redirect(url_for('home'))
 
 @app.route('/edit/<patrimonio>', methods=['POST'])
-@login_required # Protege a rota de editar
+@login_required
 def edit_item(patrimonio):
     try:
         item_atualizado = { 'marca': request.form.get('marca'), 'modelo': request.form.get('modelo'), 'numero_serie': request.form.get('numero_serie'), 'proprietario': request.form.get('proprietario'), 'status': request.form.get('status'), 'condicao': request.form.get('condicao'), 'tipo_computador': request.form.get('tipo_computador'), 'observacoes': request.form.get('observacoes'), 'modificado_por': session.get('user') }
@@ -91,7 +98,7 @@ def edit_item(patrimonio):
     return redirect(url_for('home'))
 
 @app.route('/delete/<patrimonio>', methods=['POST'])
-@login_required # Protege a rota de excluir
+@login_required
 def delete_item(patrimonio):
     try:
         supabase.table('inventario').delete().eq('patrimonio', patrimonio).execute()
