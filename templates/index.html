@@ -52,19 +52,33 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid main-container px-4">
+    <div class="container main-container">
         
         <div class="floating-panel mb-4">
             <div class="row align-items-center">
-                <div class="col-md-8">
+                <div class="col-md-9">
                     <form class="row g-3 align-items-end">
-                         </form>
+                        <div class="col-sm-4">
+                            <label for="filterColumn" class="form-label">Filtrar por</label>
+                            <select id="filterColumn" class="form-select">
+                                <option selected>Todas as Colunas</option>
+                                <option>Patrimônio</option>
+                                <option>Marca</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="searchText" class="form-label">Localizar</label>
+                            <input type="text" class="form-control" id="searchText">
+                        </div>
+                        <div class="col-sm-2">
+                             <button type="submit" class="btn btn-outline-primary w-100">Buscar</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-md-4 text-end">
-                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+                <div class="col-md-3 text-end">
+                     <button class="btn btn-primary btn-lg mt-3 mt-md-0" data-bs-toggle="modal" data-bs-target="#addModal">
                         + Adicionar Novo
                     </button>
-                    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-2">Sair</a>
                 </div>
             </div>
         </div>
@@ -79,7 +93,8 @@
                         <th>Nº de Série</th>
                         <th>Proprietário</th>
                         <th>Status</th>
-                        <th>Condição</th>
+                        <th>Condição da Carcaça</th>
+                        <th>Tipo de Computador</th>
                         <th>Observações</th>
                         <th>Última Edição</th>
                         <th>Editado Por</th>
@@ -96,6 +111,7 @@
                         <td>{{ item.proprietario }}</td>
                         <td>{{ item.status }}</td>
                         <td>{{ item.condicao }}</td>
+                        <td>{{ item.tipo_computador }}</td>
                         <td>{{ item.observacoes }}</td>
                         <td>{{ item.modificado_em | default('N/A', true) }}</td>
                         <td>{{ item.modificado_por | default('N/A', true) }}</td>
@@ -116,7 +132,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="11" class="text-center">Nenhum item encontrado.</td>
+                        <td colspan="12" class="text-center">Nenhum item encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -127,6 +143,5 @@
         </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     </body>
 </html>
