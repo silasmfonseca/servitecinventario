@@ -193,7 +193,7 @@ def main(page: ft.Page):
             ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True)
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
-        top=150, left=50, right=50, # Posição exata do painel de filtro
+        top=40, left=40, right=40, # Posição do painel de filtro (linha azul)
         visible=False 
     )
 
@@ -204,8 +204,8 @@ def main(page: ft.Page):
             expand=True
         ),
         bgcolor="white", border_radius=8, padding=10,
-        top=250, left=50, right=50, bottom=50, # Posição exata do painel da tabela
-        visible=False
+        top=390, left=40, right=40, bottom=40, # Posição do painel da tabela (linha vermelha)
+        visible=False 
     )
 
     # --- UI de Login ---
@@ -225,7 +225,7 @@ def main(page: ft.Page):
                 else: apagar_credenciais()
                 
                 login_view.visible = False
-                filter_panel.visible = True # Mostra os painéis corretos
+                filter_panel.visible = True
                 table_panel.visible = True
                 carregar_dados()
                 page.update()
