@@ -152,14 +152,12 @@ def main(page: ft.Page):
             scroll=ft.ScrollMode.ALWAYS, 
             expand=True
         ),
-        bgcolor="white", 
-        border_radius=8, # Bordas arredondadas em todos os cantos
-        padding=10,
-        # AJUSTE FINAL: Removida a altura fixa e adicionada margem inferior
+        bgcolor="white", border_radius=8, padding=10,
+        # AJUSTE FINAL: Altura fixa para garantir que a base e a barra de rolagem fiquem visíveis
         top=430, 
         left=40, 
         right=40, 
-        bottom=40, # Deixa uma margem de 40px na parte de baixo
+        height=340,
         visible=False 
     )
 
