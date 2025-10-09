@@ -31,8 +31,6 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = "#f0f2f5"
 
-    user_info = {"email": None}
-
     def salvar_credenciais(email):
         page.client_storage.set("auth.email", email.strip())
 
@@ -110,15 +108,14 @@ def main(page: ft.Page):
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # ... (Sua função original completa para abrir o formulário vai aqui)
+        # Sua função de formulário...
         pass
 
     def excluir_selecionado(e):
-        # ... (Sua função original completa para excluir vai aqui)
+        # Sua função de exclusão...
         pass
         
     def aplicar_filtro_e_busca(e):
-        # Lógica de busca a ser implementada
         carregar_dados()
 
     def limpar_filtro(e):
@@ -135,10 +132,8 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
-    # AJUSTE FINAL DE LAYOUT
     main_view = ft.Column(
         [
-            # Texto manual removido, espaçador removido
             ft.Container(
                 content=ft.Row([
                     ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
@@ -146,14 +141,14 @@ def main(page: ft.Page):
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
                 padding=20, bgcolor="white", border_radius=8
             ),
-            # Container da tabela agora se expande para preencher o espaço
+            # CORREÇÃO FINAL DE LAYOUT: Altura fixa e `expand` removido
             ft.Container(
+                height=450, # Altura ajustada para mostrar mais do fundo
                 content=ft.Row(
                     [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
                     scroll=ft.ScrollMode.ALWAYS, 
                     expand=True
                 ),
-                expand=True, # Faz a tabela ocupar o espaço vertical
                 bgcolor="white", border_radius=8, padding=10
             )
         ],
@@ -188,12 +183,16 @@ def main(page: ft.Page):
 
     login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login)], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
     login_view = ft.Container(content=login_form, alignment=ft.alignment.center, expand=True, visible=True)
-
+    
     page.add(
         ft.Stack([
             bg_image,
             login_view,
-            ft.Container(content=main_view, padding=40, expand=True)
+            ft.Container(
+                content=main_view, 
+                padding=ft.padding.only(left=40, right=40, top=150, bottom=40),
+                expand=True
+            )
         ])
     )
     
