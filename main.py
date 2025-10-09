@@ -132,27 +132,30 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
-    main_view = ft.Column(
+    # CORREÇÃO FINAL DE LAYOUT: Usando um Stack para posicionar os painéis
+    main_view = ft.Stack(
         [
+            # Painel de Filtro, posicionado no topo
             ft.Container(
                 content=ft.Row([
                     ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
                     ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True)
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
-                padding=20, bgcolor="white", border_radius=8
+                padding=20, bgcolor="white", border_radius=8,
+                top=50, left=50, right=50 # Posição a partir do topo/lados
             ),
-            # CORREÇÃO FINAL DE LAYOUT: Altura fixa e `expand` removido
+            # Painel da Tabela, posicionado mais abaixo
             ft.Container(
-                height=450, # Altura ajustada para mostrar mais do fundo
                 content=ft.Row(
                     [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
                     scroll=ft.ScrollMode.ALWAYS, 
                     expand=True
                 ),
-                bgcolor="white", border_radius=8, padding=10
+                bgcolor="white", border_radius=8, padding=10,
+                top=180, left=50, right=50, bottom=50 # Posição a partir do topo/lados e esticando até embaixo
             )
         ],
-        expand=True, visible=False, spacing=20
+        expand=True, visible=False
     )
 
     # --- UI de Login ---
@@ -188,11 +191,7 @@ def main(page: ft.Page):
         ft.Stack([
             bg_image,
             login_view,
-            ft.Container(
-                content=main_view, 
-                padding=ft.padding.only(left=40, right=40, top=150, bottom=40),
-                expand=True
-            )
+            main_view
         ])
     )
     
