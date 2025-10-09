@@ -14,7 +14,20 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 COLUNAS = ["patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao", "tipo_computador", "computador_liga", "observacoes", "modificado_em", "modificado_por"]
 COLUNAS_LABEL = { "patrimonio": "Patrimônio", "marca": "Marca", "modelo": "Modelo", "numero_serie": "Nº de Série", "proprietario": "Proprietário", "status": "Status", "condicao": "Condição da Carcaça", "tipo_computador": "Tipo de Computador", "computador_liga": "Computador Liga?", "observacoes": "Observações", "modificado_em": "Última Edição", "modificado_por": "Editado Por"}
 LABEL_TO_COL = {v: k for k, v in COLUNAS_LABEL.items()}
-DROPDOWN_OPTIONS = { "proprietario": ["Capital Company", "Conmedi - Jardins", "Conmedi - Mauá", "Conmedi - Osaco", "Conmedi - Paulista", "Conmedi - Ribeirão Pires", "Conmedi - Santo Amaro", "Conmedi - Santo André", "Conmedi - São Caetano", "Conmedi - Vila Matilde", "Engrecon", "Engrecon - BPN", "Inova Contabildiade", "MIMO", "Pro Saúde", "Rede Gaya", "Quattro Construtora", "Sealset", "Servitec - Locação", "SL Assessoria", "Super Brilho"], "status": ["Está na Servitec", "KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada", "Está com o proprietário"], "marca": ["Apple", "Acer", "Dell", "HP", "Lenovo", "Positivo", "Samsung"], "condicao": ["Nova", "Estado de Nova", "Estado de Nova (Com avarias)", "Boa", "Quebrada"], "tipo_computador": ["Desktop", "Notebook"], "computador_liga": ["Sim", "Não", "Não verificado"] }
+DROPDOWN_OPTIONS = {
+    "proprietario": ["Capital Company", "Conmedi - Jardins", "Conmedi - Mauá", "Conmedi - Osaco", "Conmedi - Paulista", "Conmedi - Ribeirão Pires", "Conmedi - Santo Amaro", "Conmedi - Santo André", "Conmedi - São Caetano", "Conmedi - Vila Matilde", "Engrecon", "Engrecon - BPN", "Inova Contabildiade", "MIMO", "Pro Saúde", "Rede Gaya", "Quattro Construtora", "Sealset", "Servitec - Locação", "SL Assessoria", "Super Brilho"],
+    "status": ["Está na Servitec", "KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada", "Está com o proprietário"],
+    "marca": ["Apple", "Acer", "Dell", "HP", "Lenovo", "Positivo", "Samsung"],
+    "condicao": ["Nova", "Estado de Nova", "Estado de Nova (Com avarias)", "Boa", "Quebrada"],
+    "tipo_computador": ["Desktop", "Notebook"],
+    "computador_liga": ["Sim", "Não", "Não verificado"],
+    "bateria": ["Sim", "Não", "Não verificado"],
+    "teclado_funciona": ["Sim", "Não", "Não verificado"],
+    "hd": ["SSD", "HD"],
+    "hd_tamanho": ["120 GB", "240 GB", "256 GB", "480 GB", "500 GB", "512 GB", "1 TB", "2 TB"],
+    "ram_tipo": ["DDR3", "DDR4", "DDR5"],
+    "ram_tamanho": ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB"]
+}
 COLUMN_WIDTHS = { "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150, "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 150, "computador_liga": 150, "observacoes": 250, "modificado_em": 150, "modificado_por": 250 }
 TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
 
@@ -23,6 +36,8 @@ def main(page: ft.Page):
     page.theme_mode = "light"
     page.padding = 0
     page.bgcolor = "#f0f2f5"
+
+    user_info = {"email": None}
 
     def salvar_credenciais(email):
         page.client_storage.set("auth.email", email.strip())
@@ -77,12 +92,15 @@ def main(page: ft.Page):
             return utc_dt.astimezone(sao_paulo_tz).strftime("%d/%m/%Y %H:%M")
         except: return iso_string
         
-    def carregar_dados(e=None):
+    def carregar_dados(query=None):
         try:
             body_list.controls.clear()
             itens_selecionados.clear()
             atualizar_estado_botoes()
-            registros = supabase.table("inventario").select("*").order("patrimonio").execute().data or []
+            if query is None:
+                query = supabase.table("inventario").select("*").order("patrimonio")
+            registros = query.execute().data or []
+            
             for item in registros:
                 chk = ft.Checkbox()
                 chk.on_change = (lambda item_data=item, chk_control=chk: lambda e: selecionar_item(item_data, chk_control))()
@@ -97,29 +115,127 @@ def main(page: ft.Page):
                 body_list.controls.append(ft.Row(controls=row_controls, spacing=0))
             page.update()
         except Exception as ex:
-            print(f"ERRO AO CARREGAR DADOS: {ex}")
+            exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
+    def aplicar_filtro_e_busca(e):
+        coluna_selecionada = filtrar_dropdown.value
+        coluna_db = LABEL_TO_COL.get(coluna_selecionada)
+        query = supabase.table("inventario").select("*").order("patrimonio")
+        try:
+            termo_busca = localizar_input.value.strip()
+            if not termo_busca:
+                carregar_dados()
+                return
+            if coluna_selecionada == "Todas as Colunas":
+                colunas_para_buscar = [c for c in COLUNAS if c not in ["modificado_em"]]
+                filtros_or = ",".join([f'{col}.ilike.%{termo_busca}%' for col in colunas_para_buscar])
+                query = query.or_(filtros_or)
+            else:
+                query = query.ilike(coluna_db, f"%{termo_busca}%")
+            carregar_dados(query)
+        except Exception as ex:
+            exibir_dialog(ft.AlertDialog(title=ft.Text("Erro na busca"), content=ft.Text(str(ex))))
+
+    def limpar_filtro(e):
+        localizar_input.value = ""
+        filtrar_dropdown.value = "Todas as Colunas"
+        carregar_dados()
+
+    # FUNÇÃO COMPLETA RESTAURADA
     def abrir_formulario(modo="add"):
-        # (Sua função original completa para abrir o formulário vai aqui)
-        print(f"Abrindo formulário no modo {modo}")
-        pass
+        valores = {}
+        if modo == "edit":
+            if not itens_selecionados: return
+            valores = itens_selecionados[0]["data"]
+        
+        campos_visiveis = [c for c in COLUNAS if c not in ["modificado_em", "modificado_por"]]
+        campos = {}
+        error_text_in_dialog = ft.Text(value="", color="red", visible=False)
+        lista_de_controles = [error_text_in_dialog]
 
+        for c in campos_visiveis:
+            valor_atual = valores.get(c)
+            valor_str = "" if valor_atual is None else str(valor_atual)
+            
+            control_criado = None
+            if c in DROPDOWN_OPTIONS:
+                opcoes = [ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])]
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=opcoes, value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None)
+            else:
+                control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str)
+            
+            campos[c] = control_criado
+            lista_de_controles.append(control_criado)
+        
+        def salvar(e):
+            dados_formulario = {c: campos[c].value for c in campos}
+            dados_formulario['modificado_por'] = page.session.get('user_email')
+            
+            if not dados_formulario.get("patrimonio"):
+                error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."
+                error_text_in_dialog.visible = True
+                page.dialog.content.update()
+                return
+
+            try:
+                if modo == "add":
+                    supabase.table("inventario").insert(dados_formulario).execute()
+                else:
+                    patrimonio_original = valores.get("patrimonio")
+                    if str(dados_formulario.get("patrimonio")) != str(patrimonio_original):
+                         error_text_in_dialog.value = "Não é permitido alterar o número do Patrimônio na edição."
+                         error_text_in_dialog.visible = True
+                         page.dialog.content.update()
+                         return
+                    supabase.table("inventario").update(dados_formulario).eq("patrimonio", patrimonio_original).execute()
+                
+                fechar_dialog(e)
+                carregar_dados()
+            except Exception as ex:
+                error_text_in_dialog.value = f"Erro ao salvar: {ex}"
+                error_text_in_dialog.visible = True
+                page.dialog.content.update()
+
+        dlg = ft.AlertDialog(
+            modal=True, 
+            title=ft.Text("Adicionar Equipamento" if modo == "add" else "Editar Equipamento"), 
+            content=ft.Column(lista_de_controles, scroll="always", height=450, width=500), 
+            actions=[ft.TextButton("Cancelar", on_click=fechar_dialog), ft.ElevatedButton("Salvar", on_click=salvar)], 
+            actions_alignment="end"
+        )
+        exibir_dialog(dlg)
+
+    # FUNÇÃO COMPLETA RESTAURADA
     def excluir_selecionado(e):
-        # (Sua função original completa para excluir vai aqui)
-        print("Excluindo itens selecionados")
-        pass
+        if not itens_selecionados: return
+        patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
+        
+        def confirmar(ev):
+            try:
+                supabase.table("inventario").delete().in_("patrimonio", patrimonios_para_excluir).execute()
+                fechar_dialog(ev)
+                carregar_dados()
+            except Exception as ex:
+                exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao excluir"), content=ft.Text(str(ex))))
+        
+        confirm_dlg = ft.AlertDialog(
+            modal=True, 
+            title=ft.Text("Confirmar Exclusão"), 
+            content=ft.Text(f"Tem certeza que deseja excluir {len(patrimonios_para_excluir)} item(ns) selecionado(s)?"),
+            actions=[ft.TextButton("Cancelar", on_click=fechar_dialog), ft.ElevatedButton("Excluir", on_click=confirmar)]
+        )
+        exibir_dialog(confirm_dlg)
 
     # --- UI Principal ---
     filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in ["Todas as Colunas"] + list(COLUNAS_LABEL.values())], value="Todas as Colunas")
-    localizar_input = ft.TextField(width=200, label="Localizar")
-    buscar_btn = ft.ElevatedButton("Buscar", icon="search")
-    limpar_btn = ft.ElevatedButton("Limpar", icon="clear")
+    localizar_input = ft.TextField(width=200, label="Localizar", on_submit=aplicar_filtro_e_busca)
+    buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=aplicar_filtro_e_busca)
+    limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
     add_btn = ft.ElevatedButton("Adicionar Novo", on_click=lambda e: abrir_formulario("add"))
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
-    # CORREÇÃO DE LAYOUT: Reestruturado para garantir as barras de rolagem
     main_view = ft.Column(
         [
             ft.Row([ft.Text("Tecnologia que move o seu negócio.", size=32, weight=ft.FontWeight.BOLD, color="#6c5ce7")]),
@@ -131,17 +247,7 @@ def main(page: ft.Page):
                 padding=20, bgcolor="white", border_radius=8
             ),
             ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Column(
-                            [header, body_list], 
-                            width=TABLE_WIDTH, # Largura total calculada para forçar o scroll horizontal
-                            expand=True # Permite que a coluna cresça e o ListView role verticalmente
-                        )
-                    ],
-                    scroll=ft.ScrollMode.ALWAYS, # Habilita a barra de rolagem horizontal para esta linha
-                    expand=True
-                ),
+                content=ft.Row([ft.Column([header, body_list], scroll=ft.ScrollMode.ADAPTIVE, expand=True)], scroll=ft.ScrollMode.ALWAYS, expand=True),
                 expand=True, bgcolor="white", border_radius=8, padding=10
             )
         ],
@@ -150,7 +256,7 @@ def main(page: ft.Page):
 
     # --- UI de Login ---
     email_input = ft.TextField(label="Usuário", width=300, autofocus=True)
-    password_input = ft.TextField(label="Senha", password=True, can_reveal_password=True, width=300)
+    password_input = ft.TextField(label="Senha", password=True, can_reveal_password=True, width=300, on_submit=lambda e: handle_login(e))
     lembrar_me_checkbox = ft.Checkbox(label="Lembrar-me")
     error_text = ft.Text(value="", color="red", visible=False)
 
