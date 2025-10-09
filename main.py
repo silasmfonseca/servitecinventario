@@ -24,8 +24,6 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = "#f0f2f5"
 
-    user_info = {"email": None}
-
     def salvar_credenciais(email):
         page.client_storage.set("auth.email", email.strip())
 
@@ -121,25 +119,30 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
+    # CORREÇÃO DE LAYOUT: Reestruturado para garantir as barras de rolagem
     main_view = ft.Column(
         [
-            ft.Container(height=100), 
             ft.Row([ft.Text("Tecnologia que move o seu negócio.", size=32, weight=ft.FontWeight.BOLD, color="#6c5ce7")]),
             ft.Container(
                 content=ft.Row([
                     ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10),
                     ft.Row([add_btn, edit_btn, delete_btn], spacing=10)
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                padding=20, 
-                bgcolor="white", # CORREÇÃO: Alterado de ft.colors.WHITE
-                border_radius=8
+                padding=20, bgcolor="white", border_radius=8
             ),
             ft.Container(
-                content=ft.Row([ft.Column([header, body_list], scroll=ft.ScrollMode.HIDDEN, expand=True)], scroll=ft.ScrollMode.ALWAYS),
-                expand=True, 
-                bgcolor="white", # CORREÇÃO: Alterado de ft.colors.WHITE
-                border_radius=8, 
-                padding=10
+                content=ft.Row(
+                    [
+                        ft.Column(
+                            [header, body_list], 
+                            width=TABLE_WIDTH, # Largura total calculada para forçar o scroll horizontal
+                            expand=True # Permite que a coluna cresça e o ListView role verticalmente
+                        )
+                    ],
+                    scroll=ft.ScrollMode.ALWAYS, # Habilita a barra de rolagem horizontal para esta linha
+                    expand=True
+                ),
+                expand=True, bgcolor="white", border_radius=8, padding=10
             )
         ],
         expand=True, visible=False, spacing=20
