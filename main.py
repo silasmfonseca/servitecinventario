@@ -29,7 +29,7 @@ def main(page: ft.Page):
     page.title = "Gerenciamento de Equipamentos Servitec"
     page.theme_mode = "light"
     page.padding = 0
-    page.bgcolor = "#f0f2f"
+    page.bgcolor = "#f0f2f5"
 
     def salvar_credenciais(email):
         page.client_storage.set("auth.email", email.strip())
@@ -132,7 +132,6 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
-    # AJUSTE DE LAYOUT: Painéis separados
     filter_panel_left = ft.Container(
         content=ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
@@ -154,7 +153,11 @@ def main(page: ft.Page):
             expand=True
         ),
         bgcolor="white", border_radius=8, padding=10,
-        top=420, left=40, right=40, bottom=60, # Posição final ajustada
+        # AJUSTE FINAL: Posição do topo e altura fixa
+        top=430, 
+        left=40, 
+        right=40, 
+        height=340, # Altura fixa como no app original
         visible=False 
     )
 
