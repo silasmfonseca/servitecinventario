@@ -108,11 +108,11 @@ def main(page: ft.Page):
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # Sua função de formulário...
+        # Cole aqui sua função de formulário completa
         pass
 
     def excluir_selecionado(e):
-        # Sua função de exclusão...
+        # Cole aqui sua função de exclusão completa
         pass
         
     def aplicar_filtro_e_busca(e):
@@ -132,30 +132,26 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
-    # CORREÇÃO FINAL DE LAYOUT: Usando um Stack para posicionar os painéis
-    main_view = ft.Stack(
-        [
-            # Painel de Filtro, posicionado no topo
-            ft.Container(
-                content=ft.Row([
-                    ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
-                    ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True)
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
-                padding=20, bgcolor="white", border_radius=8,
-                top=50, left=50, right=50 # Posição a partir do topo/lados
-            ),
-            # Painel da Tabela, posicionado mais abaixo
-            ft.Container(
-                content=ft.Row(
-                    [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
-                    scroll=ft.ScrollMode.ALWAYS, 
-                    expand=True
-                ),
-                bgcolor="white", border_radius=8, padding=10,
-                top=180, left=50, right=50, bottom=50 # Posição a partir do topo/lados e esticando até embaixo
-            )
-        ],
-        expand=True, visible=False
+    # CORREÇÃO DE LAYOUT: Definindo os painéis separadamente
+    filter_panel = ft.Container(
+        content=ft.Row([
+            ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
+            ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True)
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
+        padding=20, bgcolor="white", border_radius=8,
+        top=50, left=50, right=50,
+        visible=False # Começa invisível
+    )
+
+    table_panel = ft.Container(
+        content=ft.Row(
+            [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
+            scroll=ft.ScrollMode.ALWAYS, 
+            expand=True
+        ),
+        bgcolor="white", border_radius=8, padding=10,
+        top=180, left=50, right=50, bottom=50,
+        visible=False # Começa invisível
     )
 
     # --- UI de Login ---
@@ -175,7 +171,10 @@ def main(page: ft.Page):
                 else: apagar_credenciais()
                 
                 login_view.visible = False
-                main_view.visible = True
+                # CORREÇÃO DE LAYOUT: Torna os painéis individuais visíveis
+                filter_panel.visible = True
+                table_panel.visible = True
+                
                 carregar_dados()
                 page.update()
         except Exception as ex:
@@ -187,11 +186,13 @@ def main(page: ft.Page):
     login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login)], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
     login_view = ft.Container(content=login_form, alignment=ft.alignment.center, expand=True, visible=True)
     
+    # CORREÇÃO DE LAYOUT: Adiciona todos os elementos em camadas na Stack principal
     page.add(
         ft.Stack([
             bg_image,
             login_view,
-            main_view
+            filter_panel,
+            table_panel
         ])
     )
     
