@@ -54,9 +54,9 @@ def main(page: ft.Page):
     header = ft.Container(content=ft.Row(controls=header_controls, spacing=0), bgcolor="#f8f9fa", height=40)
     body_list = ft.ListView(expand=True, spacing=0)
 
+    # CORREÇÃO 1: Função para fechar o diálogo simplificada
     def fechar_dialog(dialog_instance):
         dialog_instance.open = False
-        page.overlay.remove(dialog_instance)
         page.update()
 
     def exibir_dialog(dialog):
@@ -109,7 +109,6 @@ def main(page: ft.Page):
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
-    # FUNÇÃO COMPLETA RESTAURADA
     def abrir_formulario(modo="add"):
         valores = {}; 
         if modo == "edit":
@@ -156,7 +155,6 @@ def main(page: ft.Page):
         dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(dlg)), ft.ElevatedButton("Salvar", on_click=salvar)]
         dlg.actions_alignment="end"; exibir_dialog(dlg)
 
-    # FUNÇÃO COMPLETA RESTAURADA
     def excluir_selecionado(e):
         if not itens_selecionados: return
         patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
@@ -175,8 +173,7 @@ def main(page: ft.Page):
         exibir_dialog(confirm_dlg)
         
     def aplicar_filtro_e_busca(e):
-        # A lógica de busca precisa ser implementada aqui
-        print("Busca acionada")
+        # Lógica de busca a ser implementada
         carregar_dados()
 
     def limpar_filtro(e):
@@ -193,10 +190,14 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
-    # CORREÇÃO DE LAYOUT E ROLAGEM
     main_view = ft.Column(
         [
-            ft.Row([ft.Text("Tecnologia que move o seu negócio.", size=32, weight=ft.FontWeight.BOLD, color="#6c5ce7")]),
+            # CORREÇÃO 2: Texto manual removido
+            # ft.Row([ft.Text("Tecnologia que move o seu negócio.", ...)]),
+            
+            # CORREÇÃO 3: Espaçador para empurrar conteúdo para baixo
+            ft.Container(height=150), 
+            
             ft.Container(
                 content=ft.Row([
                     ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
@@ -205,12 +206,14 @@ def main(page: ft.Page):
                 padding=20, bgcolor="white", border_radius=8
             ),
             ft.Container(
+                # CORREÇÃO 3: Altura fixa para o container da tabela
+                height=340,
                 content=ft.Row(
                     [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
                     scroll=ft.ScrollMode.ALWAYS, 
                     expand=True
                 ),
-                expand=True, bgcolor="white", border_radius=8, padding=10
+                bgcolor="white", border_radius=8, padding=10
             )
         ],
         expand=True, visible=False, spacing=20
@@ -231,7 +234,6 @@ def main(page: ft.Page):
                 page.session.set("user_email", user_session.user.email)
                 if lembrar_me_checkbox.value: salvar_credenciais(email)
                 else: apagar_credenciais()
-                
                 login_view.visible = False
                 main_view.visible = True
                 carregar_dados()
