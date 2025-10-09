@@ -152,12 +152,14 @@ def main(page: ft.Page):
             scroll=ft.ScrollMode.ALWAYS, 
             expand=True
         ),
-        bgcolor="white", border_radius=8, padding=10,
-        # AJUSTE FINAL: Posição do topo e altura fixa
+        bgcolor="white", 
+        border_radius=8, # Bordas arredondadas em todos os cantos
+        padding=10,
+        # AJUSTE FINAL: Removida a altura fixa e adicionada margem inferior
         top=430, 
         left=40, 
         right=40, 
-        height=340, # Altura fixa como no app original
+        bottom=40, # Deixa uma margem de 40px na parte de baixo
         visible=False 
     )
 
