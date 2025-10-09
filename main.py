@@ -123,9 +123,7 @@ def main(page: ft.Page):
 
     main_view = ft.Column(
         [
-            # AJUSTE DE LAYOUT: Espaçador invisível para empurrar o conteúdo para baixo
             ft.Container(height=100), 
-
             ft.Row([ft.Text("Tecnologia que move o seu negócio.", size=32, weight=ft.FontWeight.BOLD, color="#6c5ce7")]),
             ft.Container(
                 content=ft.Row([
@@ -133,15 +131,13 @@ def main(page: ft.Page):
                     ft.Row([add_btn, edit_btn, delete_btn], spacing=10)
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 padding=20, 
-                # AJUSTE DE LAYOUT: Fundo branco sólido para melhor leitura
-                bgcolor=ft.colors.WHITE, 
+                bgcolor="white", # CORREÇÃO: Alterado de ft.colors.WHITE
                 border_radius=8
             ),
             ft.Container(
                 content=ft.Row([ft.Column([header, body_list], scroll=ft.ScrollMode.HIDDEN, expand=True)], scroll=ft.ScrollMode.ALWAYS),
                 expand=True, 
-                # AJUSTE DE LAYOUT: Fundo branco sólido para melhor leitura
-                bgcolor=ft.colors.WHITE, 
+                bgcolor="white", # CORREÇÃO: Alterado de ft.colors.WHITE
                 border_radius=8, 
                 padding=10
             )
