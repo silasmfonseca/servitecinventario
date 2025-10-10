@@ -132,28 +132,35 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
-    # CORREÇÃO FINAL DE LAYOUT: Usando Coluna para um layout adaptativo
-    main_view = ft.Column(
-        [
-            ft.Container(
-                content=ft.Row([
-                    ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
-                    ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True)
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
-                padding=20, bgcolor="white", border_radius=8
-            ),
-            # O container da tabela agora tem 'expand=True' para preencher o espaço restante
-            ft.Container(
-                content=ft.Row(
-                    [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
-                    scroll=ft.ScrollMode.ALWAYS, 
-                    expand=True
-                ),
-                expand=True, 
-                bgcolor="white", border_radius=8, padding=10
-            )
-        ],
-        expand=True, visible=False, spacing=20
+    # RESTAURADO: Painel de filtro esquerdo, na posição correta
+    filter_panel_left = ft.Container(
+        content=ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
+        padding=20, bgcolor="white", border_radius=8,
+        top=40, left=40,
+        visible=False 
+    )
+
+    # RESTAURADO: Painel de ações direito, na posição correta
+    filter_panel_right = ft.Container(
+        content=ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True),
+        padding=20, bgcolor="white", border_radius=8,
+        top=40, right=40,
+        visible=False
+    )
+
+    # AJUSTE FINAL: Painel da tabela com altura fixa
+    table_panel = ft.Container(
+        content=ft.Row(
+            [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
+            scroll=ft.ScrollMode.ALWAYS, 
+            expand=True
+        ),
+        bgcolor="white", border_radius=8, padding=10,
+        top=390, # Posição a partir do topo
+        left=40, 
+        right=40, 
+        height=340, # Altura fixa para não estourar a tela
+        visible=False 
     )
 
     # --- UI de Login ---
@@ -173,7 +180,9 @@ def main(page: ft.Page):
                 else: apagar_credenciais()
                 
                 login_view.visible = False
-                main_view.visible = True
+                filter_panel_left.visible = True
+                filter_panel_right.visible = True
+                table_panel.visible = True
                 carregar_dados()
                 page.update()
         except Exception as ex:
@@ -189,8 +198,9 @@ def main(page: ft.Page):
         ft.Stack([
             bg_image,
             login_view,
-            # A view principal é envolvida por um container com padding para criar as margens
-            ft.Container(content=main_view, padding=40, expand=True)
+            filter_panel_left,
+            filter_panel_right,
+            table_panel
         ])
     )
     
