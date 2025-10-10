@@ -49,23 +49,18 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = "#f0f2f5"
 
-    # CORREÇÃO 2: Funções de credenciais agora salvam e carregam a senha
-    def salvar_credenciais(email, password):
+    def salvar_credenciais(email):
         page.client_storage.set("auth.email", email.strip())
-        page.client_storage.set("auth.password", password) # Salva a senha
 
     def carregar_credenciais():
         email = page.client_storage.get("auth.email")
-        password = page.client_storage.get("auth.password") # Carrega a senha
-        if email and password:
+        if email:
             email_input.value = email
-            password_input.value = password # Preenche o campo da senha
             lembrar_me_checkbox.value = True
             page.update()
     
     def apagar_credenciais():
         page.client_storage.remove("auth.email")
-        page.client_storage.remove("auth.password")
 
     bg_image = ft.Image(src="banner_servitec.png", fit=ft.ImageFit.COVER, expand=True)
     itens_selecionados = []
@@ -77,6 +72,7 @@ def main(page: ft.Page):
 
     def fechar_dialog(dialog_instance):
         dialog_instance.open = False
+        page.overlay.remove(dialog_instance)
         page.update()
 
     def exibir_dialog(dialog):
@@ -153,20 +149,31 @@ def main(page: ft.Page):
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
-    # Lembre-se de colar suas funções completas aqui
-    def abrir_formulario(modo="add"): pass
-    def excluir_selecionado(e): pass
-    def aplicar_filtro_e_busca(e): carregar_dados()
-    def limpar_filtro(e): carregar_dados()
-    def atualizar_controles_filtro(e): pass
+    def abrir_formulario(modo="add"):
+        # Cole sua função de formulário completa aqui
+        pass
 
-    # --- UI Principal (Layout travado) ---
-    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", on_change=atualizar_controles_filtro)
+    def excluir_selecionado(e):
+        # Cole sua função de exclusão completa aqui
+        pass
+        
+    def aplicar_filtro_e_busca(e):
+        carregar_dados()
+
+    def limpar_filtro(e):
+        localizar_input.value = ""; filtrar_dropdown.value = "Todas as Colunas"
+        carregar_dados()
+
+    def atualizar_controles_filtro(e):
+        pass
+
+    # --- UI Principal ---
+    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in ["Todas as Colunas"] + list(COLUNAS_LABEL.values())], value="Todas as Colunas", on_change=atualizar_controles_filtro)
     localizar_input = ft.TextField(width=200, label="Localizar", on_submit=aplicar_filtro_e_busca)
     valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200)
     buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=aplicar_filtro_e_busca)
     limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
-    atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
+    atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=lambda e: carregar_dados(None))
     add_btn = ft.ElevatedButton("Adicionar Novo", on_click=lambda e: abrir_formulario("add"))
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
@@ -177,16 +184,18 @@ def main(page: ft.Page):
         top=40, left=40,
         visible=False 
     )
+
     filter_panel_right = ft.Container(
         content=ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
         top=40, right=40,
         visible=False
     )
+
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
-            scroll=ft.ScrollMode.ALWAYS,
+            scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
         top=390, left=40, right=40, height=340,
@@ -206,11 +215,8 @@ def main(page: ft.Page):
             user_session = supabase.auth.sign_in_with_password({"email": email, "password": password})
             if user_session.user:
                 page.session.set("user_email", user_session.user.email)
-                if lembrar_me_checkbox.value: 
-                    # CORREÇÃO 2: Passando a senha para a função de salvar
-                    salvar_credenciais(email, password)
-                else: 
-                    apagar_credenciais()
+                if lembrar_me_checkbox.value: salvar_credenciais(email)
+                else: apagar_credenciais()
                 
                 login_view.visible = False
                 filter_panel_left.visible = True
@@ -226,18 +232,15 @@ def main(page: ft.Page):
 
     login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login)], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
     
-    # CORREÇÃO 1: 'login_view' agora é um Stack para permitir posicionamento
-    login_view = ft.Stack(
-        [
-            ft.Container(
-                content=login_form,
-                alignment=ft.alignment.center,
-                # Posiciona o formulário mais para baixo
-                top=150
-            )
-        ],
+    # AJUSTE: Usando o posicionamento do seu código original para a tela de login
+    login_view = ft.Container(
+        content=login_form, 
+        alignment=ft.alignment.center, 
         expand=True, 
-        visible=True
+        visible=True,
+        bottom=100, # Posiciona o container a 100px do fundo
+        left=0,
+        right=0
     )
     
     page.add(
