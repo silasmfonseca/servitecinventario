@@ -84,6 +84,17 @@ def main(page: ft.Page):
             sao_paulo_tz = pytz.timezone("America/Sao_Paulo")
             return utc_dt.astimezone(sao_paulo_tz).strftime("%d/%m/%Y %H:%M")
         except: return iso_string
+
+    # NOVA FUNÇÃO: Restaurada do seu código original para mostrar o pop-up
+    def mostrar_observacao_completa(e, observacao_texto):
+        dlg = ft.AlertDialog(
+            modal=True, 
+            title=ft.Text("Observação Completa"), 
+            content=ft.Text(observacao_texto, selectable=True), 
+            actions=[ft.TextButton("Fechar", on_click=lambda e: fechar_dialog(dlg))], 
+            actions_alignment=ft.MainAxisAlignment.END
+        )
+        exibir_dialog(dlg)
         
     def carregar_dados(e=None):
         try:
@@ -97,10 +108,28 @@ def main(page: ft.Page):
                 
                 row_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"], content=chk, alignment=ft.alignment.center)]
                 for c in COLUNAS:
-                     valor = item.get(c, "")
-                     valor_str = str(valor) if valor is not None else ""
-                     if c == "modificado_em": valor_str = formatar_data(valor_str)
-                     row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=ft.Text(valor_str, no_wrap=True, size=12), alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
+                    valor = item.get(c, "")
+                    valor_str = str(valor) if valor is not None else ""
+                    
+                    if c == "modificado_em": valor_str = formatar_data(valor_str)
+
+                    # CORREÇÃO: Lógica especial para a coluna "Observações"
+                    if c == "observacoes" and valor_str:
+                        # Limita o texto visível na tabela
+                        texto_display = (valor_str[:30] + '...') if len(valor_str) > 30 else valor_str
+                        
+                        # Cria a célula com o texto limitado, mas com tooltip e clique para ver o completo
+                        cell = ft.Container(
+                            content=ft.Text(texto_display, no_wrap=True, size=12, italic=True),
+                            tooltip=valor_str, # Mostra o texto completo ao passar o mouse
+                            on_click=lambda e, texto_completo=valor_str: mostrar_observacao_completa(e, texto_completo) # Abre o pop-up ao clicar
+                        )
+                    else:
+                        cell = ft.Container(
+                            content=ft.Text(valor_str, no_wrap=True, size=12)
+                        )
+
+                    row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=cell, alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
                 
                 body_list.controls.append(ft.Row(controls=row_controls, spacing=0))
             page.update()
@@ -149,8 +178,7 @@ def main(page: ft.Page):
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
-            scroll=ft.ScrollMode.ALWAYS
-            # CORREÇÃO FINAL: A propriedade 'expand=True' foi removida desta linha
+            scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
         top=390, left=40, right=40, height=340,
