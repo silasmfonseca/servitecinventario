@@ -5,14 +5,15 @@ import sys
 from datetime import datetime
 import pytz
 
-# --- SUPABASE ---
+# --- SUPABASE (Lendo do Ambiente do Render) ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Constantes ---
+# --- Constantes do seu código original ---
 COLUNAS = ["patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao", "tipo_computador", "computador_liga", "observacoes", "modificado_em", "modificado_por"]
 COLUNAS_LABEL = { "patrimonio": "Patrimônio", "marca": "Marca", "modelo": "Modelo", "numero_serie": "Nº de Série", "proprietario": "Proprietário", "status": "Status", "condicao": "Condição da Carcaça", "tipo_computador": "Tipo de Computador", "computador_liga": "Computador Liga?", "observacoes": "Observações", "modificado_em": "Última Edição", "modificado_por": "Editado Por"}
+LABEL_TO_COL = {v: k for k, v in COLUNAS_LABEL.items()}
 DROPDOWN_OPTIONS = {
     "proprietario": ["Capital Company", "Conmedi - Jardins", "Conmedi - Mauá", "Conmedi - Osaco", "Conmedi - Paulista", "Conmedi - Ribeirão Pires", "Conmedi - Santo Amaro", "Conmedi - Santo André", "Conmedi - São Caetano", "Conmedi - Vila Matilde", "Engrecon", "Engrecon - BPN", "Inova Contabildiade", "MIMO", "Pro Saúde", "Rede Gaya", "Quattro Construtora", "Sealset", "Servitec - Locação", "SL Assessoria", "Super Brilho"],
     "status": ["Está na Servitec", "KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada", "Está com o proprietário"],
@@ -21,6 +22,8 @@ DROPDOWN_OPTIONS = {
     "tipo_computador": ["Desktop", "Notebook"],
     "computador_liga": ["Sim", "Não", "Não verificado"],
 }
+COLUMN_WIDTHS = { "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150, "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 150, "computador_liga": 150, "observacoes": 250, "modificado_em": 150, "modificado_por": 250 }
+TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
 
 def main(page: ft.Page):
     page.title = "Gerenciamento de Equipamentos Servitec"
@@ -44,9 +47,10 @@ def main(page: ft.Page):
     bg_image = ft.Image(src="banner_servitec.png", fit=ft.ImageFit.COVER, expand=True)
     itens_selecionados = []
     
-    # --- CORREÇÃO ESTRUTURAL: Usando DataTable ---
-    colunas_datatable = [ft.DataColumn(ft.Text(label)) for label in COLUNAS_LABEL.values()]
-    tabela_dados = ft.DataTable(columns=colunas_datatable, expand=True)
+    header_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"])]
+    for col in COLUNAS: header_controls.append(ft.Container(content=ft.Text(COLUNAS_LABEL.get(col, col), weight=ft.FontWeight.BOLD, color="black54"), width=COLUMN_WIDTHS.get(col, 150), alignment=ft.alignment.center))
+    header = ft.Container(content=ft.Row(controls=header_controls, spacing=0), bgcolor="#f8f9fa", height=40)
+    body_list = ft.ListView(expand=True, spacing=0)
 
     def fechar_dialog(dialog_instance):
         dialog_instance.open = False
@@ -64,15 +68,14 @@ def main(page: ft.Page):
         delete_btn.disabled = (num_selecionados == 0)
         page.update()
 
-    def selecionar_item(e):
-        e.control.selected = not e.control.selected
-        itens_selecionados.clear()
-        for row in tabela_dados.rows:
-            if row.selected:
-                # Armazena o objeto de dados completo na primeira célula
-                itens_selecionados.append({"data": row.cells[0].data})
+    def selecionar_item(item_data, checkbox_control):
+        nonlocal itens_selecionados
+        item_info = {"data": item_data}
+        if checkbox_control.value:
+            if item_info not in itens_selecionados: itens_selecionados.append(item_info)
+        else:
+            itens_selecionados = [item for item in itens_selecionados if item["data"]["patrimonio"] != item_data["patrimonio"]]
         atualizar_estado_botoes()
-        page.update()
 
     def formatar_data(iso_string):
         if not iso_string: return ""
@@ -84,34 +87,88 @@ def main(page: ft.Page):
         
     def carregar_dados(e=None):
         try:
-            tabela_dados.rows.clear()
+            body_list.controls.clear()
             itens_selecionados.clear()
             atualizar_estado_botoes()
             registros = supabase.table("inventario").select("*").order("patrimonio").execute().data or []
             for item in registros:
-                celulas = []
-                # Passa o dicionário completo do item como 'data' na primeira célula
-                celulas.append(ft.DataCell(ft.Text(item.get("patrimonio")), data=item))
+                chk = ft.Checkbox()
+                chk.on_change = (lambda item_data=item, chk_control=chk: lambda e: selecionar_item(item_data, chk_control))()
                 
-                # Adiciona as outras células na ordem correta
-                for key in list(COLUNAS_LABEL.keys())[1:]: # Pula o primeiro (patrimonio)
-                    valor = item.get(key, "")
-                    valor_str = str(valor) if valor is not None else ""
-                    if key == "modificado_em": valor_str = formatar_data(valor_str)
-                    celulas.append(ft.DataCell(ft.Text(valor_str)))
-
-                tabela_dados.rows.append(ft.DataRow(cells=celulas, on_select_changed=selecionar_item))
+                row_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"], content=chk, alignment=ft.alignment.center)]
+                for c in COLUNAS:
+                     valor = item.get(c, "")
+                     valor_str = str(valor) if valor is not None else ""
+                     if c == "modificado_em": valor_str = formatar_data(valor_str)
+                     row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=ft.Text(valor_str, no_wrap=True, size=12), alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
+                
+                body_list.controls.append(ft.Row(controls=row_controls, spacing=0))
             page.update()
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # Lógica do formulário permanece a mesma
-        pass
+        valores = {}; 
+        if modo == "edit":
+            if not itens_selecionados: return
+            valores = itens_selecionados[0]["data"]
+        
+        campos_visiveis = [c for c in COLUNAS if c not in ["modificado_em", "modificado_por"]]
+        campos = {}
+        error_text_in_dialog = ft.Text(value="", color="red", visible=False)
+        lista_de_controles = [error_text_in_dialog]
+        
+        for c in campos_visiveis:
+            valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
+            control_criado = None
+            if c in DROPDOWN_OPTIONS:
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
+            else:
+                control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
+            campos[c] = control_criado
+            lista_de_controles.append(control_criado)
+        
+        dlg = ft.AlertDialog()
+        def salvar(e):
+            dados_formulario = {c: campos[c].value for c in campos}
+            dados_formulario['modificado_por'] = page.session.get('user_email')
+            if not dados_formulario.get("patrimonio"):
+                error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
+                dlg.content.update(); return
+            try:
+                if modo == "add": supabase.table("inventario").insert(dados_formulario).execute()
+                else:
+                    patrimonio_original = valores.get("patrimonio")
+                    if str(dados_formulario.get("patrimonio")) != str(patrimonio_original):
+                         error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
+                         dlg.content.update(); return
+                    supabase.table("inventario").update(dados_formulario).eq("patrimonio", patrimonio_original).execute()
+                fechar_dialog(dlg); carregar_dados()
+            except Exception as ex:
+                error_text_in_dialog.value = f"Erro ao salvar: {ex}"; error_text_in_dialog.visible = True
+                dlg.content.update()
+
+        dlg.modal=True; dlg.title=ft.Text("Adicionar Equipamento" if modo == "add" else "Editar Equipamento")
+        dlg.content=ft.Column(lista_de_controles, scroll="auto", height=400, width=500, spacing=10)
+        dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(dlg)), ft.ElevatedButton("Salvar", on_click=salvar)]
+        dlg.actions_alignment="end"; exibir_dialog(dlg)
 
     def excluir_selecionado(e):
-        # Lógica de exclusão permanece a mesma
-        pass
+        if not itens_selecionados: return
+        patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
+        
+        confirm_dlg = ft.AlertDialog()
+        def confirmar(ev):
+            try:
+                supabase.table("inventario").delete().in_("patrimonio", patrimonios_para_excluir).execute()
+                fechar_dialog(confirm_dlg); carregar_dados()
+            except Exception as ex:
+                exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao excluir"), content=ft.Text(str(ex))))
+        
+        confirm_dlg.modal=True; confirm_dlg.title=ft.Text("Confirmar Exclusão")
+        confirm_dlg.content=ft.Text(f"Tem certeza que deseja excluir {len(patrimonios_para_excluir)} item(ns)?")
+        confirm_dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(confirm_dlg)), ft.ElevatedButton("Excluir", on_click=confirmar)]
+        exibir_dialog(confirm_dlg)
         
     def aplicar_filtro_e_busca(e):
         carregar_dados()
@@ -144,11 +201,14 @@ def main(page: ft.Page):
         visible=False
     )
 
-    # CORREÇÃO ESTRUTURAL: O DataTable agora fica dentro de uma Coluna para ter rolagem vertical
     table_panel = ft.Container(
-        content=ft.Column([tabela_dados], scroll=ft.ScrollMode.ALWAYS, expand=True),
+        content=ft.Row(
+            [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
+            scroll=ft.ScrollMode.ALWAYS, 
+            expand=True
+        ),
         bgcolor="white", border_radius=8, padding=10,
-        top=430, left=40, right=40, height=340,
+        top=390, left=40, right=40, height=340,
         visible=False 
     )
 
@@ -183,14 +243,14 @@ def main(page: ft.Page):
     login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login)], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
     login_view = ft.Container(content=login_form, alignment=ft.alignment.center, expand=True, visible=True)
     
+    # CORREÇÃO ESTRUTURAL: Todos os painéis posicionados são filhos diretos do Stack
     page.add(
         ft.Stack([
             bg_image,
             login_view,
             filter_panel_left,
             filter_panel_right,
-            # CORREÇÃO ESTRUTURAL: A tabela agora é envolvida por uma Row para ter rolagem horizontal
-            ft.Row([table_panel], scroll=ft.ScrollMode.ALWAYS)
+            table_panel
         ])
     )
     
