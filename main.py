@@ -88,7 +88,7 @@ def main(page: ft.Page):
     def mostrar_observacao_completa(e, observacao_texto):
         dlg = ft.AlertDialog(modal=True, title=ft.Text("Observação Completa"), content=ft.Text(observacao_texto, selectable=True), actions=[ft.TextButton("Fechar", on_click=lambda e: fechar_dialog(dlg))], actions_alignment=ft.MainAxisAlignment.END)
         exibir_dialog(dlg)
-
+        
     def carregar_dados(query=None):
         try:
             body_list.controls.clear()
@@ -125,14 +125,68 @@ def main(page: ft.Page):
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # Sua função de formulário completa aqui...
-        pass
+        valores = {}; 
+        if modo == "edit":
+            if not itens_selecionados: return
+            valores = itens_selecionados[0]["data"]
+        
+        campos_visiveis = [c for c in COLUNAS if c not in ["modificado_em", "modificado_por"]]
+        campos = {}
+        error_text_in_dialog = ft.Text(value="", color="red", visible=False)
+        lista_de_controles = [error_text_in_dialog]
+        
+        for c in campos_visiveis:
+            valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
+            control_criado = None
+            if c in DROPDOWN_OPTIONS:
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
+            else:
+                control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
+            campos[c] = control_criado
+            lista_de_controles.append(control_criado)
+        
+        dlg = ft.AlertDialog()
+        def salvar(e):
+            dados_formulario = {c: campos[c].value for c in campos}
+            dados_formulario['modificado_por'] = page.session.get('user_email')
+            if not dados_formulario.get("patrimonio"):
+                error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
+                dlg.content.update(); return
+            try:
+                if modo == "add": supabase.table("inventario").insert(dados_formulario).execute()
+                else:
+                    patrimonio_original = valores.get("patrimonio")
+                    if str(dados_formulario.get("patrimonio")) != str(patrimonio_original):
+                         error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
+                         dlg.content.update(); return
+                    supabase.table("inventario").update(dados_formulario).eq("patrimonio", patrimonio_original).execute()
+                fechar_dialog(dlg); carregar_dados()
+            except Exception as ex:
+                error_text_in_dialog.value = f"Erro ao salvar: {ex}"; error_text_in_dialog.visible = True
+                dlg.content.update()
+
+        dlg.modal=True; dlg.title=ft.Text("Adicionar Equipamento" if modo == "add" else "Editar Equipamento")
+        dlg.content=ft.Column(lista_de_controles, scroll="auto", height=400, width=500, spacing=10)
+        dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(dlg)), ft.ElevatedButton("Salvar", on_click=salvar)]
+        dlg.actions_alignment="end"; exibir_dialog(dlg)
 
     def excluir_selecionado(e):
-        # Sua função de exclusão completa aqui...
-        pass
+        if not itens_selecionados: return
+        patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
+        
+        confirm_dlg = ft.AlertDialog()
+        def confirmar(ev):
+            try:
+                supabase.table("inventario").delete().in_("patrimonio", patrimonios_para_excluir).execute()
+                fechar_dialog(confirm_dlg); carregar_dados()
+            except Exception as ex:
+                exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao excluir"), content=ft.Text(str(ex))))
+        
+        confirm_dlg.modal=True; confirm_dlg.title=ft.Text("Confirmar Exclusão")
+        confirm_dlg.content=ft.Text(f"Tem certeza que deseja excluir {len(patrimonios_para_excluir)} item(ns)?")
+        confirm_dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(confirm_dlg)), ft.ElevatedButton("Excluir", on_click=confirmar)]
+        exibir_dialog(confirm_dlg)
 
-    # FUNÇÃO RESTAURADA
     def atualizar_controles_filtro(e):
         coluna_selecionada = filtrar_dropdown.value
         coluna_db = LABEL_TO_COL.get(coluna_selecionada)
@@ -145,8 +199,7 @@ def main(page: ft.Page):
             localizar_input.visible = True
             valor_filtro_dropdown.visible = False
         page.update()
-    
-    # FUNÇÃO RESTAURADA
+
     def aplicar_filtro_e_busca(e):
         coluna_selecionada = filtrar_dropdown.value
         coluna_db = LABEL_TO_COL.get(coluna_selecionada)
@@ -169,7 +222,6 @@ def main(page: ft.Page):
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro na busca"), content=ft.Text(str(ex))))
 
-    # FUNÇÃO RESTAURADA
     def limpar_filtro(e):
         localizar_input.value = ""; localizar_input.visible = True
         filtrar_dropdown.value = "Todas as Colunas"
@@ -180,7 +232,7 @@ def main(page: ft.Page):
     opcoes_filtro = ["Todas as Colunas"] + list(COLUNAS_LABEL.values())
     filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas", on_change=atualizar_controles_filtro)
     localizar_input = ft.TextField(width=200, label="Localizar", on_submit=aplicar_filtro_e_busca)
-    valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200) # Submenu restaurado
+    valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200)
     buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=aplicar_filtro_e_busca)
     limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=lambda e: carregar_dados())
