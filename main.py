@@ -11,14 +11,8 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- Constantes do seu código original ---
-# CORREÇÃO: A lista de colunas foi restaurada para a versão completa
-COLUNAS = [
-    "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao",
-    "tipo_computador", "computador_liga",
-    "hd", "hd_modelo", "hd_tamanho", "ram_tipo", "ram_tamanho",
-    "bateria", "teclado_funciona", "observacoes", "modificado_em", "modificado_por"
-]
-COLUNAS_LABEL = { "patrimonio": "Patrimônio", "marca": "Marca", "modelo": "Modelo", "numero_serie": "Nº de Série", "proprietario": "Proprietário", "status": "Status", "condicao": "Condição da Carcaça", "tipo_computador": "Tipo de Computador", "computador_liga": "Computador Liga?", "hd": "Tipo HD/SSD", "hd_modelo": "Modelo HD/SSD", "hd_tamanho": "Tamanho HD/SSD", "ram_tipo": "Tipo Memória RAM", "ram_tamanho": "Tamanho Memória RAM", "bateria": "Possui Bateria?", "teclado_funciona": "Teclado Funciona?", "observacoes": "Observações", "modificado_em": "Última Edição", "modificado_por": "Editado Por"}
+COLUNAS = ["patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao", "tipo_computador", "computador_liga", "observacoes", "modificado_em", "modificado_por"]
+COLUNAS_LABEL = { "patrimonio": "Patrimônio", "marca": "Marca", "modelo": "Modelo", "numero_serie": "Nº de Série", "proprietario": "Proprietário", "status": "Status", "condicao": "Condição da Carcaça", "tipo_computador": "Tipo de Computador", "computador_liga": "Computador Liga?", "observacoes": "Observações", "modificado_em": "Última Edição", "modificado_por": "Editado Por"}
 LABEL_TO_COL = {v: k for k, v in COLUNAS_LABEL.items()}
 DROPDOWN_OPTIONS = {
     "proprietario": ["Capital Company", "Conmedi - Jardins", "Conmedi - Mauá", "Conmedi - Osaco", "Conmedi - Paulista", "Conmedi - Ribeirão Pires", "Conmedi - Santo Amaro", "Conmedi - Santo André", "Conmedi - São Caetano", "Conmedi - Vila Matilde", "Engrecon", "Engrecon - BPN", "Inova Contabildiade", "MIMO", "Pro Saúde", "Rede Gaya", "Quattro Construtora", "Sealset", "Servitec - Locação", "SL Assessoria", "Super Brilho"],
@@ -28,7 +22,7 @@ DROPDOWN_OPTIONS = {
     "tipo_computador": ["Desktop", "Notebook"],
     "computador_liga": ["Sim", "Não", "Não verificado"],
 }
-COLUMN_WIDTHS = { "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150, "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 150, "computador_liga": 150, "hd": 120, "hd_modelo": 150, "hd_tamanho": 150, "ram_tipo": 150, "ram_tamanho": 150, "bateria": 150, "teclado_funciona": 200, "observacoes": 250, "modificado_em": 150, "modificado_por": 250 }
+COLUMN_WIDTHS = { "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150, "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 150, "computador_liga": 150, "observacoes": 250, "modificado_em": 150, "modificado_por": 250 }
 TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
 
 def main(page: ft.Page):
@@ -90,13 +84,20 @@ def main(page: ft.Page):
             sao_paulo_tz = pytz.timezone("America/Sao_Paulo")
             return utc_dt.astimezone(sao_paulo_tz).strftime("%d/%m/%Y %H:%M")
         except: return iso_string
+    
+    def mostrar_observacao_completa(e, observacao_texto):
+        dlg = ft.AlertDialog(modal=True, title=ft.Text("Observação Completa"), content=ft.Text(observacao_texto, selectable=True), actions=[ft.TextButton("Fechar", on_click=lambda e: fechar_dialog(dlg))], actions_alignment=ft.MainAxisAlignment.END)
+        exibir_dialog(dlg)
         
-    def carregar_dados(e=None):
+    def carregar_dados(query=None):
         try:
             body_list.controls.clear()
             itens_selecionados.clear()
             atualizar_estado_botoes()
-            registros = supabase.table("inventario").select("*").order("patrimonio").execute().data or []
+            if query is None:
+                query = supabase.table("inventario").select("*").order("patrimonio")
+            registros = query.execute().data or []
+            
             for item in registros:
                 chk = ft.Checkbox()
                 chk.on_change = (lambda item_data=item, chk_control=chk: lambda e: selecionar_item(item_data, chk_control))()
@@ -106,7 +107,17 @@ def main(page: ft.Page):
                      valor = item.get(c, "")
                      valor_str = str(valor) if valor is not None else ""
                      if c == "modificado_em": valor_str = formatar_data(valor_str)
-                     row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=ft.Text(valor_str, no_wrap=True, size=12), alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
+                     
+                     cell_content = ft.Text(valor_str, no_wrap=True, size=12)
+                     if c == "observacoes" and valor_str:
+                         texto_display = (valor_str[:30] + '...') if len(valor_str) > 30 else valor_str
+                         cell_content = ft.Container(
+                             content=ft.Text(texto_display, no_wrap=True, size=12, italic=True),
+                             tooltip=valor_str,
+                             on_click=lambda e, texto_completo=valor_str: mostrar_observacao_completa(e, texto_completo)
+                         )
+
+                     row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=cell_content, alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
                 
                 body_list.controls.append(ft.Row(controls=row_controls, spacing=0))
             page.update()
@@ -114,23 +125,114 @@ def main(page: ft.Page):
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # Cole sua função de formulário aqui
-        pass
+        valores = {}; 
+        if modo == "edit":
+            if not itens_selecionados: return
+            valores = itens_selecionados[0]["data"]
+        
+        campos_visiveis = [c for c in COLUNAS if c not in ["modificado_em", "modificado_por"]]
+        campos = {}
+        error_text_in_dialog = ft.Text(value="", color="red", visible=False)
+        lista_de_controles = [error_text_in_dialog]
+        
+        for c in campos_visiveis:
+            valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
+            control_criado = None
+            if c in DROPDOWN_OPTIONS:
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
+            else:
+                control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
+            campos[c] = control_criado
+            lista_de_controles.append(control_criado)
+        
+        dlg = ft.AlertDialog()
+        def salvar(e):
+            dados_formulario = {c: campos[c].value for c in campos}
+            dados_formulario['modificado_por'] = page.session.get('user_email')
+            if not dados_formulario.get("patrimonio"):
+                error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
+                dlg.content.update(); return
+            try:
+                if modo == "add": supabase.table("inventario").insert(dados_formulario).execute()
+                else:
+                    patrimonio_original = valores.get("patrimonio")
+                    if str(dados_formulario.get("patrimonio")) != str(patrimonio_original):
+                         error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
+                         dlg.content.update(); return
+                    supabase.table("inventario").update(dados_formulario).eq("patrimonio", patrimonio_original).execute()
+                fechar_dialog(dlg); carregar_dados()
+            except Exception as ex:
+                error_text_in_dialog.value = f"Erro ao salvar: {ex}"; error_text_in_dialog.visible = True
+                dlg.content.update()
+
+        dlg.modal=True; dlg.title=ft.Text("Adicionar Equipamento" if modo == "add" else "Editar Equipamento")
+        dlg.content=ft.Column(lista_de_controles, scroll="auto", height=400, width=500, spacing=10)
+        dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(dlg)), ft.ElevatedButton("Salvar", on_click=salvar)]
+        dlg.actions_alignment="end"; exibir_dialog(dlg)
 
     def excluir_selecionado(e):
-        # Cole sua função de exclusão aqui
-        pass
+        if not itens_selecionados: return
+        patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
         
+        confirm_dlg = ft.AlertDialog()
+        def confirmar(ev):
+            try:
+                supabase.table("inventario").delete().in_("patrimonio", patrimonios_para_excluir).execute()
+                fechar_dialog(confirm_dlg); carregar_dados()
+            except Exception as ex:
+                exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao excluir"), content=ft.Text(str(ex))))
+        
+        confirm_dlg.modal=True; confirm_dlg.title=ft.Text("Confirmar Exclusão")
+        confirm_dlg.content=ft.Text(f"Tem certeza que deseja excluir {len(patrimonios_para_excluir)} item(ns)?")
+        confirm_dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(confirm_dlg)), ft.ElevatedButton("Excluir", on_click=confirmar)]
+        exibir_dialog(confirm_dlg)
+        
+    def atualizar_controles_filtro(e):
+        coluna_selecionada = filtrar_dropdown.value
+        coluna_db = LABEL_TO_COL.get(coluna_selecionada)
+        if coluna_db in DROPDOWN_OPTIONS:
+            localizar_input.visible = False
+            valor_filtro_dropdown.visible = True
+            valor_filtro_dropdown.options = [ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS[coluna_db]]
+            valor_filtro_dropdown.value = None
+        else:
+            localizar_input.visible = True
+            valor_filtro_dropdown.visible = False
+        page.update()
+
     def aplicar_filtro_e_busca(e):
-        carregar_dados()
+        coluna_selecionada = filtrar_dropdown.value
+        coluna_db = LABEL_TO_COL.get(coluna_selecionada)
+        query = supabase.table("inventario").select("*").order("patrimonio")
+        try:
+            if valor_filtro_dropdown.visible:
+                valor = valor_filtro_dropdown.value
+                if not valor: carregar_dados(); return
+                query = query.eq(coluna_db, valor)
+            else:
+                termo_busca = localizar_input.value.strip()
+                if not termo_busca: carregar_dados(); return
+                if coluna_selecionada == "Todas as Colunas":
+                    colunas_para_buscar = [c for c in COLUNAS if c not in ["modificado_em"]]
+                    filtros_or = ",".join([f'{col}.ilike.%{termo_busca}%' for col in colunas_para_buscar])
+                    query = query.or_(filtros_or)
+                else:
+                    query = query.ilike(coluna_db, f"%{termo_busca}%")
+            carregar_dados(query)
+        except Exception as ex:
+            exibir_dialog(ft.AlertDialog(title=ft.Text("Erro na busca"), content=ft.Text(str(ex))))
 
     def limpar_filtro(e):
-        localizar_input.value = ""; filtrar_dropdown.value = "Todas as Colunas"
+        localizar_input.value = ""; localizar_input.visible = True
+        filtrar_dropdown.value = "Todas as Colunas"
+        valor_filtro_dropdown.value = None; valor_filtro_dropdown.visible = False
         carregar_dados()
 
     # --- UI Principal ---
-    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in ["Todas as Colunas"] + list(COLUNAS_LABEL.keys())], value="Todas as Colunas")
+    opcoes_filtro = ["Todas as Colunas"] + list(COLUNAS_LABEL.values())
+    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas", on_change=atualizar_controles_filtro)
     localizar_input = ft.TextField(width=200, label="Localizar", on_submit=aplicar_filtro_e_busca)
+    valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200) # Submenu adicionado
     buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=aplicar_filtro_e_busca)
     limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
@@ -139,7 +241,7 @@ def main(page: ft.Page):
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
     filter_panel_left = ft.Container(
-        content=ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
+        content=ft.Row([filtrar_dropdown, localizar_input, valor_filtro_dropdown, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
         top=40, left=40,
         visible=False 
@@ -155,7 +257,7 @@ def main(page: ft.Page):
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
-            scroll=ft.ScrollMode.ALWAYS, 
+            scroll=ft.ScrollMode.ALWAYS,
         ),
         bgcolor="white", border_radius=8, padding=10,
         top=390, left=40, right=40, height=340,
