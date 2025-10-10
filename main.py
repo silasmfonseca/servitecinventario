@@ -10,7 +10,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Constantes do seu código original ---
+# --- Constantes Completas do seu código original ---
 COLUNAS = [
     "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao",
     "tipo_computador", "computador_liga", "hd", "hd_modelo", "hd_tamanho", 
@@ -115,7 +115,6 @@ def main(page: ft.Page):
                 query = supabase.table("inventario").select("*").order("patrimonio")
             registros = query.execute().data or []
             
-            # MUDANÇA: Adicionado 'enumerate' para obter o índice da linha
             for i, item in enumerate(registros):
                 chk = ft.Checkbox()
                 chk.on_change = (lambda item_data=item, chk_control=chk: lambda e: selecionar_item(item_data, chk_control))()
@@ -137,10 +136,8 @@ def main(page: ft.Page):
 
                      row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=cell_content, alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
                 
-                # MUDANÇA: Lógica para alternar a cor de fundo da linha
-                row_color = "#f8f9fa" if i % 2 != 0 else "white"
+                row_color = "#e9ecef" if i % 2 != 0 else "white"
                 
-                # MUDANÇA: A linha agora é envolvida por um Container para ter cor de fundo
                 body_list.controls.append(
                     ft.Container(
                         content=ft.Row(controls=row_controls, spacing=0),
@@ -152,59 +149,79 @@ def main(page: ft.Page):
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # Cole sua função de formulário completa aqui
-        pass
+        valores = {}; 
+        if modo == "edit":
+            if not itens_selecionados: return
+            valores = itens_selecionados[0]["data"]
+        
+        campos_visiveis = [c for c in COLUNAS if c not in ["modificado_em", "modificado_por"]]
+        campos = {}
+        error_text_in_dialog = ft.Text(value="", color="red", visible=False)
+        lista_de_controles = [error_text_in_dialog]
+        
+        for c in campos_visiveis:
+            valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
+            control_criado = None
+            if c in DROPDOWN_OPTIONS:
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
+            else:
+                control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
+            campos[c] = control_criado
+            lista_de_controles.append(control_criado)
+        
+        dlg = ft.AlertDialog()
+        def salvar(e):
+            dados_formulario = {c: campos[c].value for c in campos}
+            dados_formulario['modificado_por'] = page.session.get('user_email')
+            if not dados_formulario.get("patrimonio"):
+                error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
+                dlg.content.update(); return
+            try:
+                if modo == "add": supabase.table("inventario").insert(dados_formulario).execute()
+                else:
+                    patrimonio_original = valores.get("patrimonio")
+                    if str(dados_formulario.get("patrimonio")) != str(patrimonio_original):
+                         error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
+                         dlg.content.update(); return
+                    supabase.table("inventario").update(dados_formulario).eq("patrimonio", patrimonio_original).execute()
+                fechar_dialog(dlg); carregar_dados()
+            except Exception as ex:
+                error_text_in_dialog.value = f"Erro ao salvar: {ex}"; error_text_in_dialog.visible = True
+                dlg.content.update()
+
+        dlg.modal=True; dlg.title=ft.Text("Adicionar Equipamento" if modo == "add" else "Editar Equipamento")
+        dlg.content=ft.Column(lista_de_controles, scroll="auto", height=400, width=500, spacing=10)
+        dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(dlg)), ft.ElevatedButton("Salvar", on_click=salvar)]
+        dlg.actions_alignment="end"; exibir_dialog(dlg)
 
     def excluir_selecionado(e):
-        # Cole sua função de exclusão completa aqui
-        pass
-
-    def atualizar_controles_filtro(e):
-        coluna_selecionada = filtrar_dropdown.value
-        coluna_db = LABEL_TO_COL.get(coluna_selecionada)
-        if coluna_db in DROPDOWN_OPTIONS:
-            localizar_input.visible = False
-            valor_filtro_dropdown.visible = True
-            valor_filtro_dropdown.options = [ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS[coluna_db]]
-            valor_filtro_dropdown.value = None
-        else:
-            localizar_input.visible = True
-            valor_filtro_dropdown.visible = False
-        page.update()
-
+        if not itens_selecionados: return
+        patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
+        
+        confirm_dlg = ft.AlertDialog()
+        def confirmar(ev):
+            try:
+                supabase.table("inventario").delete().in_("patrimonio", patrimonios_para_excluir).execute()
+                fechar_dialog(confirm_dlg); carregar_dados()
+            except Exception as ex:
+                exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao excluir"), content=ft.Text(str(ex))))
+        
+        confirm_dlg.modal=True; confirm_dlg.title=ft.Text("Confirmar Exclusão")
+        confirm_dlg.content=ft.Text(f"Tem certeza que deseja excluir {len(patrimonios_para_excluir)} item(ns)?")
+        confirm_dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(confirm_dlg)), ft.ElevatedButton("Excluir", on_click=confirmar)]
+        exibir_dialog(confirm_dlg)
+        
     def aplicar_filtro_e_busca(e):
-        coluna_selecionada = filtrar_dropdown.value
-        coluna_db = LABEL_TO_COL.get(coluna_selecionada)
-        query = supabase.table("inventario").select("*").order("patrimonio")
-        try:
-            if valor_filtro_dropdown.visible:
-                valor = valor_filtro_dropdown.value
-                if not valor: carregar_dados(None); return
-                query = query.eq(coluna_db, valor)
-            else:
-                termo_busca = localizar_input.value.strip()
-                if not termo_busca: carregar_dados(None); return
-                if coluna_selecionada == "Todas as Colunas":
-                    colunas_para_buscar = [c for c in COLUNAS if c not in ["modificado_em"]]
-                    filtros_or = ",".join([f'{col}.ilike.%{termo_busca}%' for col in colunas_para_buscar])
-                    query = query.or_(filtros_or)
-                else:
-                    query = query.ilike(coluna_db, f"%{termo_busca}%")
-            carregar_dados(query)
-        except Exception as ex:
-            exibir_dialog(ft.AlertDialog(title=ft.Text("Erro na busca"), content=ft.Text(str(ex))))
+        carregar_dados()
 
     def limpar_filtro(e):
-        localizar_input.value = ""; localizar_input.visible = True
-        filtrar_dropdown.value = "Todas as Colunas"
-        valor_filtro_dropdown.value = None; valor_filtro_dropdown.visible = False
+        localizar_input.value = ""; filtrar_dropdown.value = "Todas as Colunas"
         carregar_dados()
 
     # --- UI Principal ---
     opcoes_filtro = ["Todas as Colunas"] + list(COLUNAS_LABEL.values())
-    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas", on_change=atualizar_controles_filtro)
+    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas")
     localizar_input = ft.TextField(width=200, label="Localizar", on_submit=aplicar_filtro_e_busca)
-    valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200)
     buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=aplicar_filtro_e_busca)
     limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=lambda e: carregar_dados(None))
@@ -213,7 +230,7 @@ def main(page: ft.Page):
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
     filter_panel_left = ft.Container(
-        content=ft.Row([filtrar_dropdown, localizar_input, valor_filtro_dropdown, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
+        content=ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
         top=40, left=40,
         visible=False 
