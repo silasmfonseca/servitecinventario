@@ -328,22 +328,22 @@ def main(page: ft.Page):
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
     
-    # <<< CORREÇÃO DE LAYOUT APLICADA AQUI >>>
+    # <<< CORREÇÃO FINAL DE LAYOUT APLICADA AQUI >>>
     filter_panel_left = ft.Container(
         content=ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
-        top=300, left=40, # Posição ajustada para baixo
+        top=140, left=40, # Posição ajustada para baixo, mas ainda no topo
         visible=False 
     )
 
-    # <<< CORREÇÃO DE LAYOUT APLICADA AQUI >>>
     filter_panel_right = ft.Container(
         content=ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
-        top=300, right=40, # Posição ajustada para baixo
+        top=140, right=40, # Posição ajustada para baixo, mas ainda no topo
         visible=False
     )
     
+    # Mantendo o painel da tabela na posição original exata
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
@@ -384,6 +384,7 @@ def main(page: ft.Page):
 
     login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login), error_text], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
     
+    # Mantendo a view de login na posição original exata
     login_view = ft.Container(
         content=login_form, 
         alignment=ft.alignment.center,
