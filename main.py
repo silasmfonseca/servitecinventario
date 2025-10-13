@@ -62,6 +62,9 @@ def main(page: ft.Page):
     itens_selecionados = []
     active_filters = {}
     header_controls = {}
+    # NOVO: Controle de texto para o contador
+    total_count_text = ft.Text("0", size=24, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
+
 
     def salvar_credenciais(email, password):
         page.client_storage.set("auth.email", email.strip())
@@ -178,13 +181,15 @@ def main(page: ft.Page):
             
             query = supabase.table("inventario").select("*").order("patrimonio")
 
-            # Aplica apenas os filtros de coluna (Excel-like)
             for column, values in active_filters.items():
                 if values:
                     query = query.in_(column, values)
             
             registros = query.execute().data or []
             
+            # ATUALIZA O CONTADOR
+            total_count_text.value = str(len(registros))
+
             for i, item in enumerate(registros):
                 chk = ft.Checkbox()
                 chk.on_change = (lambda item_data=item, chk_control=chk: lambda e: selecionar_item(item_data, chk_control))()
@@ -325,14 +330,32 @@ def main(page: ft.Page):
         visible=False 
     )
     
-    # <<< ALTURA DA TABELA CORRIGIDA AQUI >>>
+    # NOVO: Painel do contador
+    counter_panel = ft.Container(
+        content=ft.Column(
+            [
+                ft.Text("Total de Equipamentos", color="black54", size=12),
+                total_count_text,
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=2,
+        ),
+        padding=20,
+        bgcolor="white",
+        border_radius=8,
+        width=220,
+        top=40,
+        right=40,
+        visible=False
+    )
+    
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
             scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
-        top=420, left=40, right=40, height=310, # Altura reduzida para compensar a descida
+        top=420, left=40, right=40, height=310,
         visible=False 
     )
 
@@ -354,6 +377,7 @@ def main(page: ft.Page):
                 
                 login_view.visible = False
                 action_panel.visible = True
+                counter_panel.visible = True # Mostra o contador
                 table_panel.visible = True
                 carregar_dados()
                 page.update()
@@ -380,6 +404,7 @@ def main(page: ft.Page):
             bg_image,
             login_view,
             action_panel,
+            counter_panel, # Adiciona o contador à página
             table_panel
         ])
     )
