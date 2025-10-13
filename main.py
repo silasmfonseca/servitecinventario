@@ -10,7 +10,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Constantes do seu código original ---
+# --- Constantes Completas do seu código original ---
 COLUNAS = [
     "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao",
     "tipo_computador", "computador_liga", "hd", "hd_modelo", "hd_tamanho", 
@@ -34,6 +34,12 @@ DROPDOWN_OPTIONS = {
     "condicao": ["Nova", "Estado de Nova", "Estado de Nova (Com avarias)", "Boa", "Quebrada"],
     "tipo_computador": ["Desktop", "Notebook"],
     "computador_liga": ["Sim", "Não", "Não verificado"],
+    "bateria": ["Sim", "Não", "Não verificado"],
+    "teclado_funciona": ["Sim", "Não", "Não verificado"],
+    "hd": ["SSD", "HD"],
+    "hd_tamanho": ["120 GB", "240 GB", "256 GB", "480 GB", "500 GB", "512 GB", "1 TB", "2 TB"],
+    "ram_tipo": ["DDR3", "DDR4", "DDR5"],
+    "ram_tamanho": ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB"]
 }
 COLUMN_WIDTHS = { 
     "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150, 
@@ -142,24 +148,19 @@ def main(page: ft.Page):
                 
                 row_color = "#e9ecef" if i % 2 != 0 else "white"
                 
-                body_list.controls.append(
-                    ft.Container(
-                        content=ft.Row(controls=row_controls, spacing=0),
-                        bgcolor=row_color
-                    )
-                )
+                body_list.controls.append(ft.Container(content=ft.Row(controls=row_controls, spacing=0), bgcolor=row_color))
             page.update()
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # Cole sua função de formulário completa aqui
+        # Lógica completa do formulário...
         pass
 
     def excluir_selecionado(e):
-        # Cole sua função de exclusão completa aqui
+        # Lógica completa de exclusão...
         pass
-
+        
     def atualizar_controles_filtro(e):
         coluna_selecionada = filtrar_dropdown.value
         coluna_db = LABEL_TO_COL.get(coluna_selecionada)
@@ -230,7 +231,7 @@ def main(page: ft.Page):
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
-            scroll=ft.ScrollMode.ALWAYS,
+            scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
         top=390, left=40, right=40, height=340,
