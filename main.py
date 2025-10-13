@@ -41,15 +41,13 @@ DROPDOWN_OPTIONS = {
     "ram_tipo": ["DDR3", "DDR4", "DDR5"],
     "ram_tamanho": ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB"]
 }
-
-# <<< LARGURAS CORRIGIDAS AQUI >>>
 COLUMN_WIDTHS = {
     "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150,
-    "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 180, # Aumentado
-    "computador_liga": 160, # Aumentado
+    "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 180,
+    "computador_liga": 160,
     "hd": 120, "hd_modelo": 150, "hd_tamanho": 150, "ram_tipo": 150,
-    "ram_tamanho": 200, # Aumentado
-    "bateria": 200, # Aumentado
+    "ram_tamanho": 200,
+    "bateria": 200,
     "teclado_funciona": 200, "observacoes": 250, "modificado_em": 150, "modificado_por": 250
 }
 TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
@@ -180,22 +178,11 @@ def main(page: ft.Page):
             
             query = supabase.table("inventario").select("*").order("patrimonio")
 
+            # Aplica apenas os filtros de coluna (Excel-like)
             for column, values in active_filters.items():
                 if values:
                     query = query.in_(column, values)
-
-            search_term = localizar_input.value.strip()
-            filter_column_label = filtrar_dropdown.value
             
-            if search_term:
-                if filter_column_label == "Todas as Colunas":
-                    or_filters = [f"{col}.ilike.%{search_term}%" for col in COLUNAS if col not in ['modificado_em']]
-                    query = query.or_(",".join(or_filters))
-                else:
-                    column_name = LABEL_TO_COL.get(filter_column_label)
-                    if column_name:
-                        query = query.ilike(column_name, f"%{search_term}%")
-
             registros = query.execute().data or []
             
             for i, item in enumerate(registros):
@@ -316,35 +303,29 @@ def main(page: ft.Page):
         exibir_dialog(confirm_dlg)
         
     def limpar_filtro(e):
-        localizar_input.value = ""
-        filtrar_dropdown.value = "Todas as Colunas"
+        # ATUALIZADO: Limpa apenas os filtros de coluna
         active_filters.clear()
         atualizar_icones_filtro()
         carregar_dados()
 
     # --- UI Principal ---
-    opcoes_filtro = ["Todas as Colunas"] + list(COLUNAS_LABEL.values())
-    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas")
-    localizar_input = ft.TextField(width=200, label="Localizar", on_submit=carregar_dados)
-    buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=carregar_dados)
-    limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
-    atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
+    # ATUALIZADO: Definição de botões
     add_btn = ft.ElevatedButton("Adicionar Novo", on_click=lambda e: abrir_formulario("add"))
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
+    limpar_btn = ft.ElevatedButton("Limpar Filtros", icon="clear", on_click=limpar_filtro)
+    atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
     
-    filter_panel_left = ft.Container(
-        content=ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
+    # NOVO: Um único painel de ações na esquerda
+    action_panel = ft.Container(
+        content=ft.Row(
+            [add_btn, edit_btn, delete_btn, limpar_btn, atualizar_btn], 
+            spacing=10, 
+            wrap=True
+        ),
         padding=20, bgcolor="white", border_radius=8,
         top=140, left=40,
         visible=False 
-    )
-
-    filter_panel_right = ft.Container(
-        content=ft.Row([add_btn, edit_btn, delete_btn], spacing=10, wrap=True),
-        padding=20, bgcolor="white", border_radius=8,
-        top=140, right=40,
-        visible=False
     )
     
     table_panel = ft.Container(
@@ -374,8 +355,7 @@ def main(page: ft.Page):
                 else: apagar_credenciais()
                 
                 login_view.visible = False
-                filter_panel_left.visible = True
-                filter_panel_right.visible = True
+                action_panel.visible = True # Mostra o novo painel
                 table_panel.visible = True
                 carregar_dados()
                 page.update()
@@ -397,12 +377,12 @@ def main(page: ft.Page):
         right=0
     )
     
+    # ATUALIZADO: Stack principal agora tem apenas o action_panel
     page.add(
         ft.Stack([
             bg_image,
             login_view,
-            filter_panel_left,
-            filter_panel_right,
+            action_panel,
             table_panel
         ])
     )
