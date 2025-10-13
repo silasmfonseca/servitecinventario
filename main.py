@@ -11,25 +11,50 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Constantes Completas ---
-COLUNAS = [ "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao", "tipo_computador", "computador_liga", "observacoes", "modificado_em", "modificado_por" ]
-COLUNAS_LABEL = { "patrimonio": "Patrimônio", "marca": "Marca", "modelo": "Modelo", "numero_serie": "Nº de Série", "proprietario": "Proprietário", "status": "Status", "condicao": "Condição da Carcaça", "tipo_computador": "Tipo de Computador", "computador_liga": "Computador Liga?", "observacoes": "Observações", "modificado_em": "Última Edição", "modificado_por": "Editado Por" }
+# --- Constantes Completas do seu código original ---
+COLUNAS = [
+    "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao",
+    "tipo_computador", "computador_liga", "hd", "hd_modelo", "hd_tamanho",
+    "ram_tipo", "ram_tamanho", "bateria", "teclado_funciona",
+    "observacoes", "modificado_em", "modificado_por"
+]
+COLUNAS_LABEL = {
+    "patrimonio": "Patrimônio", "marca": "Marca", "modelo": "Modelo", "numero_serie": "Nº de Série",
+    "proprietario": "Proprietário", "status": "Status", "condicao": "Condição da Carcaça",
+    "tipo_computador": "Tipo de Computador", "computador_liga": "Computador Liga?",
+    "hd": "Tipo HD/SSD", "hd_modelo": "Modelo HD/SSD", "hd_tamanho": "Tamanho HD/SSD",
+    "ram_tipo": "Tipo Memória RAM", "ram_tamanho": "Tamanho Memória RAM",
+    "bateria": "Possui Bateria?", "teclado_funciona": "Teclado Funciona?",
+    "observacoes": "Observações", "modificado_em": "Última Edição", "modificado_por": "Editado Por"
+}
 LABEL_TO_COL = {v: k for k, v in COLUNAS_LABEL.items()}
-DROPDOWN_OPTIONS = { "proprietario": ["Quattro Construtora", "Outro"], "status": ["Está na Servitec", "KLV / Reparando"], "marca": ["Lenovo", "Dell", "HP"], "condicao": ["Boa", "Quebrada"], "tipo_computador": ["Notebook", "Desktop"], "computador_liga": ["Sim", "Não", "Não verificado"] }
-COLUMN_WIDTHS = { "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150, "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 150, "computador_liga": 150, "observacoes": 250, "modificado_em": 150, "modificado_por": 250 }
+DROPDOWN_OPTIONS = {
+    "proprietario": ["Capital Company", "Conmedi - Jardins", "Conmedi - Mauá", "Conmedi - Osaco", "Conmedi - Paulista", "Conmedi - Ribeirão Pires", "Conmedi - Santo Amaro", "Conmedi - Santo André", "Conmedi - São Caetano", "Conmedi - Vila Matilde", "Engrecon", "Engrecon - BPN", "Inova Contabildiade", "MIMO", "Pro Saúde", "Rede Gaya", "Quattro Construtora", "Sealset", "Servitec - Locação", "SL Assessoria", "Super Brilho"],
+    "status": ["Está na Servitec", "KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada", "Está com o proprietário"],
+    "marca": ["Apple", "Acer", "Dell", "HP", "Lenovo", "Positivo", "Samsung"],
+    "condicao": ["Nova", "Estado de Nova", "Estado de Nova (Com avarias)", "Boa", "Quebrada"],
+    "tipo_computador": ["Desktop", "Notebook"],
+    "computador_liga": ["Sim", "Não", "Não verificado"],
+}
+COLUMN_WIDTHS = {
+    "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150,
+    "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 150, "computador_liga": 150,
+    "hd": 120, "hd_modelo": 150, "hd_tamanho": 150, "ram_tipo": 150, "ram_tamanho": 150,
+    "bateria": 150, "teclado_funciona": 200, "observacoes": 250, "modificado_em": 150, "modificado_por": 250
+}
 TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
 
 def main(page: ft.Page):
-    page.title = "Gerenciamento de Equipamentos"
+    page.title = "Gerenciamento de Equipamentos Servitec"
     page.theme_mode = "light"
     page.padding = 0
     page.bgcolor = "#f0f2f5"
 
-    FILTER_STORAGE_KEY = "inventario_filters_excel_v1"
+    FILTER_STORAGE_KEY = "inventario_filters_v2"
 
     def salvar_filtros_em_storage():
         page.client_storage.set(FILTER_STORAGE_KEY, json.dumps(filtros_ativos))
-
+    
     def carregar_filtros_do_storage():
         try:
             s = page.client_storage.get(FILTER_STORAGE_KEY)
