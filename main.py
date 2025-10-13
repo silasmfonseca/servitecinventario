@@ -82,6 +82,7 @@ def main(page: ft.Page):
 
     def fechar_dialog(dialog_instance):
         dialog_instance.open = False
+        page.overlay.remove(dialog_instance)
         page.update()
 
     def exibir_dialog(dialog):
@@ -147,19 +148,73 @@ def main(page: ft.Page):
                      row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=cell_content, alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
                 
                 row_color = "#e9ecef" if i % 2 != 0 else "white"
-                
                 body_list.controls.append(ft.Container(content=ft.Row(controls=row_controls, spacing=0), bgcolor=row_color))
             page.update()
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
     def abrir_formulario(modo="add"):
-        # Lógica completa do formulário...
-        pass
+        valores = {}; 
+        if modo == "edit":
+            if not itens_selecionados: return
+            valores = itens_selecionados[0]["data"]
+        
+        campos_visiveis = [c for c in COLUNAS if c not in ["modificado_em", "modificado_por"]]
+        campos = {}
+        error_text_in_dialog = ft.Text(value="", color="red", visible=False)
+        lista_de_controles = [error_text_in_dialog]
+        
+        for c in campos_visiveis:
+            valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
+            control_criado = None
+            if c in DROPDOWN_OPTIONS:
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
+            else:
+                control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
+            campos[c] = control_criado
+            lista_de_controles.append(control_criado)
+        
+        dlg = ft.AlertDialog()
+        def salvar(e):
+            dados_formulario = {c: campos[c].value for c in campos}
+            dados_formulario['modificado_por'] = page.session.get('user_email')
+            if not dados_formulario.get("patrimonio"):
+                error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
+                dlg.content.update(); return
+            try:
+                if modo == "add": supabase.table("inventario").insert(dados_formulario).execute()
+                else:
+                    patrimonio_original = valores.get("patrimonio")
+                    if str(dados_formulario.get("patrimonio")) != str(patrimonio_original):
+                         error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
+                         dlg.content.update(); return
+                    supabase.table("inventario").update(dados_formulario).eq("patrimonio", patrimonio_original).execute()
+                fechar_dialog(dlg); carregar_dados()
+            except Exception as ex:
+                error_text_in_dialog.value = f"Erro ao salvar: {ex}"; error_text_in_dialog.visible = True
+                dlg.content.update()
+
+        dlg.modal=True; dlg.title=ft.Text("Adicionar Equipamento" if modo == "add" else "Editar Equipamento")
+        dlg.content=ft.Column(lista_de_controles, scroll="auto", height=400, width=500, spacing=10)
+        dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(dlg)), ft.ElevatedButton("Salvar", on_click=salvar)]
+        dlg.actions_alignment="end"; exibir_dialog(dlg)
 
     def excluir_selecionado(e):
-        # Lógica completa de exclusão...
-        pass
+        if not itens_selecionados: return
+        patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
+        
+        confirm_dlg = ft.AlertDialog()
+        def confirmar(ev):
+            try:
+                supabase.table("inventario").delete().in_("patrimonio", patrimonios_para_excluir).execute()
+                fechar_dialog(confirm_dlg); carregar_dados()
+            except Exception as ex:
+                exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao excluir"), content=ft.Text(str(ex))))
+        
+        confirm_dlg.modal=True; confirm_dlg.title=ft.Text("Confirmar Exclusão")
+        confirm_dlg.content=ft.Text(f"Tem certeza que deseja excluir {len(patrimonios_para_excluir)} item(ns)?")
+        confirm_dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(confirm_dlg)), ft.ElevatedButton("Excluir", on_click=confirmar)]
+        exibir_dialog(confirm_dlg)
         
     def atualizar_controles_filtro(e):
         coluna_selecionada = filtrar_dropdown.value
@@ -267,15 +322,7 @@ def main(page: ft.Page):
             page.update()
 
     login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login)], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
-    login_view = ft.Container(
-        content=login_form, 
-        alignment=ft.alignment.center,
-        expand=True,
-        visible=True,
-        bottom=150, 
-        left=0,
-        right=0
-    )
+    login_view = ft.Container(content=login_form, alignment=ft.alignment.center, expand=True, visible=True)
     
     page.add(
         ft.Stack([
