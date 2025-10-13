@@ -34,12 +34,6 @@ DROPDOWN_OPTIONS = {
     "condicao": ["Nova", "Estado de Nova", "Estado de Nova (Com avarias)", "Boa", "Quebrada"],
     "tipo_computador": ["Desktop", "Notebook"],
     "computador_liga": ["Sim", "Não", "Não verificado"],
-    "bateria": ["Sim", "Não", "Não verificado"],
-    "teclado_funciona": ["Sim", "Não", "Não verificado"],
-    "hd": ["SSD", "HD"],
-    "hd_tamanho": ["120 GB", "240 GB", "256 GB", "480 GB", "500 GB", "512 GB", "1 TB", "2 TB"],
-    "ram_tipo": ["DDR3", "DDR4", "DDR5"],
-    "ram_tamanho": ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB"]
 }
 COLUMN_WIDTHS = { 
     "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150, 
@@ -122,14 +116,8 @@ def main(page: ft.Page):
             itens_selecionados.clear()
             atualizar_estado_botoes()
             if query is None:
-                query = supabase.table("inventario").select("*", count='exact').order("patrimonio")
-            
-            response = query.execute()
-            registros = response.data or []
-            total_count = response.count
-
-            # MUDANÇA: Atualiza o texto do contador
-            total_computadores_text.value = f"Mostrando {len(registros)} de {total_count} computadores"
+                query = supabase.table("inventario").select("*").order("patrimonio")
+            registros = query.execute().data or []
             
             for i, item in enumerate(registros):
                 chk = ft.Checkbox()
@@ -158,14 +146,11 @@ def main(page: ft.Page):
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
-    def abrir_formulario(modo="add"):
-        # Cole sua função de formulário completa aqui
-        pass
+    # Lembre-se de colar suas funções completas de formulário aqui
+    def abrir_formulario(modo="add"): pass
+    def excluir_selecionado(e): pass
 
-    def excluir_selecionado(e):
-        # Cole sua função de exclusão completa aqui
-        pass
-
+    # --- LÓGICA DE FILTRO AVANÇADO ---
     def atualizar_controles_filtro(e):
         coluna_selecionada = filtrar_dropdown.value
         coluna_db = LABEL_TO_COL.get(coluna_selecionada)
@@ -182,7 +167,7 @@ def main(page: ft.Page):
     def aplicar_filtro_e_busca(e):
         coluna_selecionada = filtrar_dropdown.value
         coluna_db = LABEL_TO_COL.get(coluna_selecionada)
-        query = supabase.table("inventario").select("*", count='exact').order("patrimonio")
+        query = supabase.table("inventario").select("*").order("patrimonio")
         try:
             if valor_filtro_dropdown.visible:
                 valor = valor_filtro_dropdown.value
@@ -211,20 +196,17 @@ def main(page: ft.Page):
     opcoes_filtro = ["Todas as Colunas"] + list(COLUNAS_LABEL.values())
     filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas", on_change=atualizar_controles_filtro)
     localizar_input = ft.TextField(width=200, label="Localizar", on_submit=aplicar_filtro_e_busca)
-    valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200)
+    valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200) # O novo submenu de filtro
     buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=aplicar_filtro_e_busca)
     limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=lambda e: carregar_dados(None))
     add_btn = ft.ElevatedButton("Adicionar Novo", on_click=lambda e: abrir_formulario("add"))
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
-    
-    # MUDANÇA: Criação do controle de texto para o contador
-    total_computadores_text = ft.Text(value="Total: 0", weight=ft.FontWeight.BOLD, color="black54")
 
     filter_panel_left = ft.Container(
-        # MUDANÇA: Adicionado o contador à barra de filtros
-        content=ft.Row([filtrar_dropdown, localizar_input, valor_filtro_dropdown, buscar_btn, limpar_btn, atualizar_btn, total_computadores_text], spacing=10, wrap=True, alignment=ft.MainAxisAlignment.START),
+        # Adicionado o 'valor_filtro_dropdown' ao layout
+        content=ft.Row([filtrar_dropdown, localizar_input, valor_filtro_dropdown, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
         top=40, left=40,
         visible=False 
