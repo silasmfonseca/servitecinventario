@@ -57,8 +57,8 @@ def main(page: ft.Page):
 
     # --- Variáveis de Estado ---
     itens_selecionados = []
-    active_filters = {}  # NOVO: Dicionário para guardar os filtros ativos
-    header_controls = {} # NOVO: Dicionário para referenciar os controles do cabeçalho
+    active_filters = {}
+    header_controls = {}
 
     def salvar_credenciais(email, password):
         page.client_storage.set("auth.email", email.strip())
@@ -117,7 +117,6 @@ def main(page: ft.Page):
         exibir_dialog(dlg)
 
     def atualizar_icones_filtro():
-        # NOVO: Atualiza a cor do ícone se um filtro estiver ativo
         for col, control_dict in header_controls.items():
             if col in COLUNAS:
                 icon_btn = control_dict['icon']
@@ -125,9 +124,7 @@ def main(page: ft.Page):
         page.update()
 
     def abrir_dialog_filtro(e, column_name):
-        # NOVO: Função para criar e exibir o dialog de filtro
         try:
-            # Busca todos os valores únicos e não nulos da coluna no DB
             response = supabase.table("inventario").select(column_name).execute()
             valores_unicos = sorted(list(set(item[column_name] for item in response.data if item[column_name] not in [None, ""])))
         except Exception as ex:
@@ -141,7 +138,7 @@ def main(page: ft.Page):
             if valores_selecionados:
                 active_filters[column_name] = valores_selecionados
             elif column_name in active_filters:
-                del active_filters[column_name] # Remove o filtro se nada for selecionado
+                del active_filters[column_name]
             
             fechar_dialog(dlg)
             atualizar_icones_filtro()
@@ -171,7 +168,6 @@ def main(page: ft.Page):
         exibir_dialog(dlg)
 
     def carregar_dados(e=None):
-        # ATUALIZADO: Lógica de carregamento agora inclui filtros de coluna e busca global
         try:
             body_list.controls.clear()
             itens_selecionados.clear()
@@ -179,12 +175,10 @@ def main(page: ft.Page):
             
             query = supabase.table("inventario").select("*").order("patrimonio")
 
-            # 1. Aplicar filtros de coluna (Excel-like)
             for column, values in active_filters.items():
                 if values:
                     query = query.in_(column, values)
 
-            # 2. Aplicar filtro de busca global
             search_term = localizar_input.value.strip()
             filter_column_label = filtrar_dropdown.value
             
@@ -199,7 +193,6 @@ def main(page: ft.Page):
 
             registros = query.execute().data or []
             
-            # --- O restante da função permanece igual ---
             for i, item in enumerate(registros):
                 chk = ft.Checkbox()
                 chk.on_change = (lambda item_data=item, chk_control=chk: lambda e: selecionar_item(item_data, chk_control))()
@@ -230,7 +223,7 @@ def main(page: ft.Page):
     header_row_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"])]
     for col in COLUNAS:
         filter_icon = ft.IconButton(
-            icon=ft.icons.FILTER_ALT_OUTLINED,
+            icon="filter_alt_outlined",  # <<< CORREÇÃO APLICADA AQUI
             icon_size=16,
             icon_color="black26",
             on_click=lambda e, c=col: abrir_dialog_filtro(e, c),
@@ -318,7 +311,6 @@ def main(page: ft.Page):
         exibir_dialog(confirm_dlg)
         
     def limpar_filtro(e):
-        # ATUALIZADO: Limpa a busca, o dropdown E os filtros de coluna
         localizar_input.value = ""
         filtrar_dropdown.value = "Todas as Colunas"
         active_filters.clear()
@@ -356,8 +348,8 @@ def main(page: ft.Page):
             scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
-        top=140, # Ajustado para dar espaço aos paineis de filtro
-        left=40, right=40, bottom=40, # Usando bottom em vez de height
+        top=140,
+        left=40, right=40, bottom=40,
         visible=False 
     )
 
