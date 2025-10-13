@@ -314,7 +314,6 @@ def main(page: ft.Page):
     limpar_btn = ft.ElevatedButton("Limpar Filtros", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
     
-    # <<< POSIÇÃO DOS BOTÕES AJUSTADA AQUI >>>
     action_panel = ft.Container(
         content=ft.Row(
             [add_btn, edit_btn, delete_btn, limpar_btn, atualizar_btn], 
@@ -322,17 +321,18 @@ def main(page: ft.Page):
             wrap=True
         ),
         padding=20, bgcolor="white", border_radius=8,
-        top=40, left=40, # Posição ajustada para o topo
+        top=40, left=40,
         visible=False 
     )
     
+    # <<< AJUSTE FINO NA POSIÇÃO DA TABELA >>>
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
             scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
-        top=390, left=40, right=40, height=340,
+        top=420, left=40, right=40, height=340, # Posição ajustada para baixo
         visible=False 
     )
 
