@@ -82,7 +82,6 @@ def main(page: ft.Page):
 
     def fechar_dialog(dialog_instance):
         dialog_instance.open = False
-        page.overlay.remove(dialog_instance)
         page.update()
 
     def exibir_dialog(dialog):
@@ -215,7 +214,7 @@ def main(page: ft.Page):
         confirm_dlg.content=ft.Text(f"Tem certeza que deseja excluir {len(patrimonios_para_excluir)} item(ns)?")
         confirm_dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(confirm_dlg)), ft.ElevatedButton("Excluir", on_click=confirmar)]
         exibir_dialog(confirm_dlg)
-        
+
     def atualizar_controles_filtro(e):
         coluna_selecionada = filtrar_dropdown.value
         coluna_db = LABEL_TO_COL.get(coluna_selecionada)
