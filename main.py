@@ -382,27 +382,31 @@ def main(page: ft.Page):
             error_text.value = "Usuário ou senha inválidos."
             error_text.visible = True
             page.update()
-
+            
+    # <<< CORREÇÃO APLICADA AQUI >>>
     login_form = ft.Container(
-        content=ft.Column(
-            [
-                ft.Text("Login", size=30), 
-                email_input, 
-                password_input, 
-                lembrar_me_checkbox, 
-                ft.ElevatedButton("Entrar", on_click=handle_login), 
-                error_text
-            ], 
-            spacing=15, 
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER
-        ), 
-        width=400, 
-        padding=40, 
-        border_radius=10, 
-        bgcolor="white", 
+        width=400,
+        border_radius=10,
+        bgcolor="white",
         shadow=ft.BoxShadow(blur_radius=10, color="black26"),
-        # <<< CORREÇÃO APLICADA AQUI >>>
-        clip_behavior=ft.ClipBehavior.ANTI_ALIAS_WITH_SAVE_LAYER,
+        content=ft.ClipRRect(
+            border_radius=ft.border_radius.all(10),
+            content=ft.Container(
+                padding=40,
+                content=ft.Column(
+                    [
+                        ft.Text("Login", size=30),
+                        email_input,
+                        password_input,
+                        lembrar_me_checkbox,
+                        ft.ElevatedButton("Entrar", on_click=handle_login),
+                        error_text
+                    ],
+                    spacing=15,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+            ),
+        ),
     )
     
     login_view = ft.Container(
