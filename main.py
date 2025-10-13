@@ -153,25 +153,18 @@ def main(page: ft.Page):
     def excluir_selecionado(e):
         # Cole sua função de exclusão completa aqui
         pass
-
-    def atualizar_controles_filtro(e):
-        # Cole sua função de filtro completa aqui
-        pass
-
+        
     def aplicar_filtro_e_busca(e):
-        # Cole sua função de busca completa aqui
-        pass
+        carregar_dados()
 
     def limpar_filtro(e):
         localizar_input.value = ""; filtrar_dropdown.value = "Todas as Colunas"
-        valor_filtro_dropdown.visible = False; localizar_input.visible = True
         carregar_dados()
 
     # --- UI Principal ---
     opcoes_filtro = ["Todas as Colunas"] + list(COLUNAS_LABEL.values())
-    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas", on_change=atualizar_controles_filtro)
+    filtrar_dropdown = ft.Dropdown(width=200, label="Filtrar por", options=[ft.dropdown.Option(opt) for opt in opcoes_filtro], value="Todas as Colunas")
     localizar_input = ft.TextField(width=200, label="Localizar", on_submit=aplicar_filtro_e_busca)
-    valor_filtro_dropdown = ft.Dropdown(label="Valor", visible=False, width=200)
     buscar_btn = ft.ElevatedButton("Buscar", icon="search", on_click=aplicar_filtro_e_busca)
     limpar_btn = ft.ElevatedButton("Limpar", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=lambda e: carregar_dados(None))
@@ -180,7 +173,7 @@ def main(page: ft.Page):
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
 
     filter_panel_left = ft.Container(
-        content=ft.Row([filtrar_dropdown, localizar_input, valor_filtro_dropdown, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
+        content=ft.Row([filtrar_dropdown, localizar_input, buscar_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
         top=40, left=40,
         visible=False 
@@ -199,11 +192,7 @@ def main(page: ft.Page):
             scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
-        # AJUSTE FINO DE POSIÇÃO FINAL
-        top=430, 
-        left=40, 
-        right=40, 
-        height=340,
+        top=390, left=40, right=40, height=340,
         visible=False 
     )
 
