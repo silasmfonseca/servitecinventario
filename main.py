@@ -62,9 +62,7 @@ def main(page: ft.Page):
     itens_selecionados = []
     active_filters = {}
     header_controls = {}
-    # NOVO: Controle de texto para o contador
     total_count_text = ft.Text("0", size=24, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
-
 
     def salvar_credenciais(email, password):
         page.client_storage.set("auth.email", email.strip())
@@ -187,7 +185,6 @@ def main(page: ft.Page):
             
             registros = query.execute().data or []
             
-            # ATUALIZA O CONTADOR
             total_count_text.value = str(len(registros))
 
             for i, item in enumerate(registros):
@@ -330,7 +327,6 @@ def main(page: ft.Page):
         visible=False 
     )
     
-    # NOVO: Painel do contador
     counter_panel = ft.Container(
         content=ft.Column(
             [
@@ -377,7 +373,7 @@ def main(page: ft.Page):
                 
                 login_view.visible = False
                 action_panel.visible = True
-                counter_panel.visible = True # Mostra o contador
+                counter_panel.visible = True
                 table_panel.visible = True
                 carregar_dados()
                 page.update()
@@ -387,7 +383,27 @@ def main(page: ft.Page):
             error_text.visible = True
             page.update()
 
-    login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login), error_text], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
+    login_form = ft.Container(
+        content=ft.Column(
+            [
+                ft.Text("Login", size=30), 
+                email_input, 
+                password_input, 
+                lembrar_me_checkbox, 
+                ft.ElevatedButton("Entrar", on_click=handle_login), 
+                error_text
+            ], 
+            spacing=15, 
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+        ), 
+        width=400, 
+        padding=40, 
+        border_radius=10, 
+        bgcolor="white", 
+        shadow=ft.BoxShadow(blur_radius=10, color="black26"),
+        # <<< CORREÇÃO APLICADA AQUI >>>
+        clip_behavior=ft.ClipBehavior.ANTI_ALIAS_WITH_SAVE_LAYER,
+    )
     
     login_view = ft.Container(
         content=login_form, 
@@ -404,7 +420,7 @@ def main(page: ft.Page):
             bg_image,
             login_view,
             action_panel,
-            counter_panel, # Adiciona o contador à página
+            counter_panel,
             table_panel
         ])
     )
