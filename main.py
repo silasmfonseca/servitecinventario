@@ -303,20 +303,18 @@ def main(page: ft.Page):
         exibir_dialog(confirm_dlg)
         
     def limpar_filtro(e):
-        # ATUALIZADO: Limpa apenas os filtros de coluna
         active_filters.clear()
         atualizar_icones_filtro()
         carregar_dados()
 
     # --- UI Principal ---
-    # ATUALIZADO: Definição de botões
     add_btn = ft.ElevatedButton("Adicionar Novo", on_click=lambda e: abrir_formulario("add"))
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
     limpar_btn = ft.ElevatedButton("Limpar Filtros", icon="clear", on_click=limpar_filtro)
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
     
-    # NOVO: Um único painel de ações na esquerda
+    # <<< POSIÇÃO DOS BOTÕES AJUSTADA AQUI >>>
     action_panel = ft.Container(
         content=ft.Row(
             [add_btn, edit_btn, delete_btn, limpar_btn, atualizar_btn], 
@@ -324,7 +322,7 @@ def main(page: ft.Page):
             wrap=True
         ),
         padding=20, bgcolor="white", border_radius=8,
-        top=140, left=40,
+        top=40, left=40, # Posição ajustada para o topo
         visible=False 
     )
     
@@ -355,7 +353,7 @@ def main(page: ft.Page):
                 else: apagar_credenciais()
                 
                 login_view.visible = False
-                action_panel.visible = True # Mostra o novo painel
+                action_panel.visible = True
                 table_panel.visible = True
                 carregar_dados()
                 page.update()
@@ -377,7 +375,6 @@ def main(page: ft.Page):
         right=0
     )
     
-    # ATUALIZADO: Stack principal agora tem apenas o action_panel
     page.add(
         ft.Stack([
             bg_image,
