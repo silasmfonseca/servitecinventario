@@ -325,14 +325,14 @@ def main(page: ft.Page):
         visible=False 
     )
     
-    # <<< AJUSTE FINO NA POSIÇÃO DA TABELA >>>
+    # <<< ALTURA DA TABELA CORRIGIDA AQUI >>>
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
             scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
-        top=420, left=40, right=40, height=340, # Posição ajustada para baixo
+        top=420, left=40, right=40, height=310, # Altura reduzida para compensar a descida
         visible=False 
     )
 
