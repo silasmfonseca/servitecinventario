@@ -223,7 +223,7 @@ def main(page: ft.Page):
     header_row_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"])]
     for col in COLUNAS:
         filter_icon = ft.IconButton(
-            icon="filter_alt_outlined",  # <<< CORREÇÃO APLICADA AQUI
+            icon="filter_alt_outlined",
             icon_size=16,
             icon_color="black26",
             on_click=lambda e, c=col: abrir_dialog_filtro(e, c),
@@ -341,15 +341,15 @@ def main(page: ft.Page):
         top=40, right=40,
         visible=False
     )
-
+    
+    # <<< CORREÇÃO DE LAYOUT APLICADA AQUI >>>
     table_panel = ft.Container(
         content=ft.Row(
             [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
             scroll=ft.ScrollMode.ALWAYS, 
         ),
         bgcolor="white", border_radius=8, padding=10,
-        top=140,
-        left=40, right=40, bottom=40,
+        top=390, left=40, right=40, height=340, # Posição e tamanho originais restaurados
         visible=False 
     )
 
@@ -382,11 +382,16 @@ def main(page: ft.Page):
             page.update()
 
     login_form = ft.Container(content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login), error_text], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=400, padding=40, border_radius=10, bgcolor="white", shadow=ft.BoxShadow(blur_radius=10, color="black26"))
+    
+    # <<< CORREÇÃO DE LAYOUT APLICADA AQUI >>>
     login_view = ft.Container(
         content=login_form, 
         alignment=ft.alignment.center,
         expand=True,
-        visible=True
+        visible=True,
+        bottom=150, # Posição original restaurada
+        left=0,
+        right=0
     )
     
     page.add(
