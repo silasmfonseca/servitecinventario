@@ -17,7 +17,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Constantes Atualizadas ---
+# --- Constantes ---
 COLUNAS = [
     "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", 
     "valor_orcamento", "status_orcamento", "descricao_orcamento",
@@ -77,13 +77,11 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = "#f0f2f5"
     
-    # ATUALIZADO: Sistema de papéis (Roles)
     USER_ROLES = {
         "aline.mendes@servitecbrasil.com.br": "KLV",
         "victor.suarez@servitecbrasil.com.br": "ORCAMENTO"
     }
 
-    # --- Variáveis de Estado ---
     itens_selecionados = []
     active_filters = {}
     header_controls = {}
@@ -101,6 +99,15 @@ def main(page: ft.Page):
             return locale.currency(value_float, grouping=True, symbol='R$')
         except (ValueError, TypeError):
             return value_str
+    
+    # <<< FUNÇÃO CORRIGIDA/READICIONADA AQUI >>>
+    def formatar_data(iso_string):
+        if not iso_string: return ""
+        try:
+            utc_dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+            sao_paulo_tz = pytz.timezone("America/Sao_Paulo")
+            return utc_dt.astimezone(sao_paulo_tz).strftime("%d/%m/%Y %H:%M")
+        except: return iso_string
 
     def salvar_credenciais(email, password):
         page.client_storage.set("auth.email", email.strip())
@@ -135,8 +142,10 @@ def main(page: ft.Page):
         num_selecionados = len(itens_selecionados)
         role = get_user_role()
         edit_btn.disabled = (num_selecionados != 1)
-        # Apenas ADMIN pode deletar
-        delete_btn.disabled = (num_selecionados == 0) or (role != "ADMIN")
+        
+        # Apenas ADMIN e ORCAMENTO podem deletar
+        can_delete = role in ["ADMIN", "ORCAMENTO"]
+        delete_btn.disabled = (num_selecionados == 0) or not can_delete
         page.update()
     
     def selecionar_item(item_data, checkbox_control):
@@ -293,21 +302,25 @@ def main(page: ft.Page):
             else:
                 control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
 
-            # Desabilita campos com base nas novas regras de permissão
-            control_criado.disabled = True # Começa desabilitado
-            if modo == "add" and role == "ADMIN": # Admin pode editar tudo no modo ADD
-                control_criado.disabled = False
-            elif modo == "edit":
-                if (role == "ADMIN" and c not in ["valor_orcamento", "status_orcamento", "descricao_orcamento"]):
-                    control_criado.disabled = False
-                elif (role == "KLV" and c in ["status", "valor_orcamento", "descricao_orcamento", "observacoes"]):
-                    control_criado.disabled = False
-                elif (role == "ORCAMENTO" and c != "status_orcamento"):
-                    control_criado.disabled = False # Victor edita tudo, exceto o campo que só ele pode
-                elif (role == "ORCAMENTO" and c == "status_orcamento"):
-                    control_criado.disabled = False
+            if modo == "add" and c == "status_orcamento":
+                control_criado.value = "Aguardando orçamento"
+                control_criado.disabled = True # Bloqueia no modo ADD
 
-            # Patrimônio nunca pode ser editado
+            if modo == "edit":
+                # Lógica de permissão corrigida
+                if role == "ADMIN":
+                    if c in ["valor_orcamento", "status_orcamento", "descricao_orcamento"]:
+                        control_criado.disabled = True
+                elif role == "KLV":
+                    if c not in ["status", "valor_orcamento", "descricao_orcamento", "observacoes"]:
+                        control_criado.disabled = True
+                elif role == "ORCAMENTO":
+                    if c != "status_orcamento":
+                        control_criado.disabled = True
+            
+            if modo == "add" and role != "ADMIN":
+                 control_criado.disabled = True
+
             if modo == "edit" and c == "patrimonio":
                 control_criado.disabled = True
             
@@ -316,19 +329,18 @@ def main(page: ft.Page):
         
         dlg = ft.AlertDialog()
         def salvar(e):
-            dados_formulario = {c: campos[c].value for c in campos if not campos[c].disabled}
-            dados_formulario['modificado_por'] = page.session.get('user_email')
+            # Salva apenas os campos que não estão desabilitados
+            dados_para_salvar = {c: campos[c].value for c in campos if not campos[c].disabled}
+            dados_para_salvar['modificado_por'] = page.session.get('user_email')
             
-            dados_para_salvar = {k: v for k, v in dados_formulario.items() if v is not None}
-
             if modo == "add":
+                # Pega todos os valores para o modo ADD
                 dados_para_salvar = {c: campos[c].value for c in campos}
                 dados_para_salvar["status_orcamento"] = "Aguardando orçamento"
                 dados_para_salvar['modificado_por'] = page.session.get('user_email')
-
-            if get_user_role() == "ADMIN" and modo == "add" and not dados_para_salvar.get("patrimonio"):
-                error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
-                dlg.content.update(); return
+                if not dados_para_salvar.get("patrimonio"):
+                    error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
+                    dlg.content.update(); return
             
             try:
                 if modo == "add":
@@ -412,7 +424,7 @@ def main(page: ft.Page):
                 else: apagar_credenciais()
                 
                 role = get_user_role()
-                if role == "KLV":
+                if role == "KLV": # Apenas Aline não pode adicionar
                     add_btn.disabled = True
                 
                 login_view.visible = False
