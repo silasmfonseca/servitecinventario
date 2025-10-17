@@ -267,15 +267,21 @@ def main(page: ft.Page):
             valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
             control_criado = None
             
-            # ATUALIZADO: Cria dropdown de status customizado para usuário KLV
+            # ATUALIZADO: Lógica para o campo "status" para usuários limitados
             if limited and modo == "edit" and c == "status":
-                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in KLV_STATUS_OPTIONS], value=valor_str if valor_str in KLV_STATUS_OPTIONS else None, width=450)
+                # Mostra apenas as opções permitidas para KLV
+                control_criado = ft.Dropdown(
+                    label=COLUNAS_LABEL.get(c,c), 
+                    options=[ft.dropdown.Option(opt) for opt in KLV_STATUS_OPTIONS], 
+                    value=valor_str if valor_str in KLV_STATUS_OPTIONS else None, # Garante que o valor atual, se for KLV, apareça
+                    width=450
+                )
             elif c in DROPDOWN_OPTIONS:
                 control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
             else:
                 control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
             
-            # ATUALIZADO: Desabilita campos, exceto 'observacoes' e 'status'
+            # ATUALIZADO: Desabilita campos, exceto 'observacoes' e 'status' para usuários limitados em modo edição
             if modo == "edit" and limited and c not in ["observacoes", "status"]:
                 control_criado.disabled = True
             
@@ -294,18 +300,27 @@ def main(page: ft.Page):
                     "observacoes": dados_formulario.get("observacoes"),
                     "modificado_por": dados_formulario.get("modificado_por")
                 }
-            else:
+            else: # Usuário não limitado ou modo "add"
                 dados_para_salvar = dados_formulario
+            
+            # Validar status para usuário limitado
+            if is_limited_user() and modo == "edit" and dados_para_salvar.get("status") not in KLV_STATUS_OPTIONS:
+                error_text_in_dialog.value = "Status inválido para este usuário."; error_text_in_dialog.visible = True
+                dlg.content.update(); return
 
             if not dados_para_salvar.get("patrimonio") and not is_limited_user():
                 error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
                 dlg.content.update(); return
             try:
                 if modo == "add":
+                    # Usuários limitados não podem adicionar novos itens
+                    if is_limited_user():
+                        error_text_in_dialog.value = "Usuários com acesso limitado não podem adicionar novos itens."; error_text_in_dialog.visible = True
+                        dlg.content.update(); return
                     supabase.table("inventario").insert(dados_para_salvar).execute()
                 else:
                     patrimonio_original = valores.get("patrimonio")
-                    if "patrimonio" in dados_para_salvar and str(dados_para_salvar.get("patrimonio")) != str(patrimonio_original):
+                    if "patrimonio" in dados_formulario and str(dados_formulario.get("patrimonio")) != str(patrimonio_original) and not is_limited_user():
                         error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
                         dlg.content.update(); return
                     supabase.table("inventario").update(dados_para_salvar).eq("patrimonio", patrimonio_original).execute()
@@ -387,6 +402,21 @@ def main(page: ft.Page):
         visible=False 
     )
 
+    # NOVO: Texto "Desenvolvido por Silas Fonseca"
+    dev_text = ft.Container(
+        content=ft.Text(
+            "Desenvolvido por Silas Fonseca",
+            color=ft.colors.WHITE, # Ou a cor exata da sua imagem, se souber o código hex
+            weight=ft.FontWeight.BOLD, # Ajuste conforme a fonte da imagem
+            size=16, # Ajuste conforme a fonte da imagem
+        ),
+        # Posição aproximada baseada na imagem
+        bottom=235, # Ajuste este valor para mover para cima/baixo
+        right=180, # Ajuste este valor para mover para esquerda/direita
+        alignment=ft.alignment.center_right # Alinha o texto à direita do container
+    )
+
+
     # --- UI de Login ---
     email_input = ft.TextField(label="Usuário", width=300, autofocus=True)
     password_input = ft.TextField(label="Senha", password=True, can_reveal_password=True, width=300, on_submit=lambda e: handle_login(e))
@@ -456,7 +486,8 @@ def main(page: ft.Page):
             login_view,
             action_panel,
             counter_panel,
-            table_panel
+            table_panel,
+            dev_text # ADICIONADO: A frase "Desenvolvido por Silas Fonseca"
         ])
     )
     
