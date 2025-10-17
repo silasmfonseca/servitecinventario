@@ -52,13 +52,15 @@ COLUMN_WIDTHS = {
 }
 TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
 
+# NOVO: Opções de status permitidas para o usuário da KLV
+KLV_STATUS_OPTIONS = ["KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada"]
+
 def main(page: ft.Page):
     page.title = "Gerenciamento de Equipamentos Servitec"
     page.theme_mode = "light"
     page.padding = 0
     page.bgcolor = "#f0f2f5"
     
-    # NOVO: Lista de usuários com acesso limitado
     LIMITED_USERS = {"aline.mendes@servitecbrasil.com.br"}
 
     # --- Variáveis de Estado ---
@@ -67,7 +69,6 @@ def main(page: ft.Page):
     header_controls = {}
     total_count_text = ft.Text("0", size=24, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
 
-    # NOVO: Função para verificar se o usuário é limitado
     def is_limited_user():
         user_email = page.session.get("user_email")
         return user_email in LIMITED_USERS
@@ -104,7 +105,6 @@ def main(page: ft.Page):
     def atualizar_estado_botoes():
         num_selecionados = len(itens_selecionados)
         edit_btn.disabled = (num_selecionados != 1)
-        # Se for usuário limitado, o botão de deletar sempre estará desabilitado
         delete_btn.disabled = (num_selecionados == 0) or is_limited_user()
         page.update()
 
@@ -251,7 +251,6 @@ def main(page: ft.Page):
     header = ft.Container(content=ft.Row(controls=header_row_controls, spacing=0), bgcolor="#f8f9fa", height=40)
 
     def abrir_formulario(modo="add"):
-        # ATUALIZADO: Verifica o tipo de usuário
         limited = is_limited_user()
 
         valores = {}; 
@@ -267,13 +266,17 @@ def main(page: ft.Page):
         for c in campos_visiveis:
             valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
             control_criado = None
-            if c in DROPDOWN_OPTIONS:
+            
+            # ATUALIZADO: Cria dropdown de status customizado para usuário KLV
+            if limited and modo == "edit" and c == "status":
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in KLV_STATUS_OPTIONS], value=valor_str if valor_str in KLV_STATUS_OPTIONS else None, width=450)
+            elif c in DROPDOWN_OPTIONS:
                 control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
             else:
                 control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
             
-            # ATUALIZADO: Desabilita campos para usuário limitado no modo de edição
-            if modo == "edit" and limited and c != "observacoes":
+            # ATUALIZADO: Desabilita campos, exceto 'observacoes' e 'status'
+            if modo == "edit" and limited and c not in ["observacoes", "status"]:
                 control_criado.disabled = True
             
             campos[c] = control_criado
@@ -284,9 +287,10 @@ def main(page: ft.Page):
             dados_formulario = {c: campos[c].value for c in campos}
             dados_formulario['modificado_por'] = page.session.get('user_email')
 
-            # ATUALIZADO: Define quais dados podem ser salvos pelo usuário limitado
             if modo == "edit" and is_limited_user():
+                # ATUALIZADO: Permite salvar 'status' e 'observacoes'
                 dados_para_salvar = {
+                    "status": dados_formulario.get("status"),
                     "observacoes": dados_formulario.get("observacoes"),
                     "modificado_por": dados_formulario.get("modificado_por")
                 }
@@ -399,15 +403,9 @@ def main(page: ft.Page):
                 if lembrar_me_checkbox.value: salvar_credenciais(email, password)
                 else: apagar_credenciais()
                 
-                # ATUALIZADO: Desabilita botões para usuário limitado
                 if is_limited_user():
                     add_btn.disabled = True
                     delete_btn.disabled = True
-                    # O botão Editar é controlado pela seleção, então não mexemos
-                    # Os botões de filtro e atualização podem continuar ativos se desejado
-                    # Para bloquear TUDO exceto editar, descomente abaixo
-                    # limpar_btn.disabled = True
-                    # atualizar_btn.disabled = True
                 
                 login_view.visible = False
                 action_panel.visible = True
