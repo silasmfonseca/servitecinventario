@@ -373,7 +373,7 @@ def main(page: ft.Page):
         top=420, left=40, right=40, height=310, visible=False 
     )
 
-    # <<<< POSIÇÃO CORRIGIDA AQUI >>>>
+    # <<<< POSICIONAMENTO RESPONSIVO APLICADO AQUI >>>>
     dev_text = ft.Container(
         content=ft.Text(
             "Desenvolvido por Silas Fonseca",
@@ -381,8 +381,8 @@ def main(page: ft.Page):
             weight=ft.FontWeight.BOLD,
             size=16,
         ),
-        bottom=30, # Margem pequena para o fundo
-        right=40,  # Margem pequena para a direita
+        alignment=ft.alignment.bottom_right,      # Ancora o container no canto inferior direito
+        margin=ft.margin.only(bottom=30, right=40) # Aplica uma margem a partir do canto
     )
 
     email_input = ft.TextField(label="Usuário", width=300, autofocus=True)
@@ -436,7 +436,6 @@ def main(page: ft.Page):
         bottom=150, left=0, right=0
     )
     
-    # <<<< LÓGICA DE TEXTO SIMPLIFICADA AQUI >>>>
     page.add(
         ft.Stack([
             bg_image,
@@ -444,7 +443,7 @@ def main(page: ft.Page):
             action_panel,
             counter_panel,
             table_panel,
-            dev_text # Adiciona o texto. Ele ficará visível em ambas as telas.
+            dev_text
         ])
     )
     
