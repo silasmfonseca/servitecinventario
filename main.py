@@ -295,7 +295,7 @@ def main(page: ft.Page):
                 dados_para_salvar = dados_formulario
             
             if is_limited_user() and modo == "edit" and dados_para_salvar.get("status") not in KLV_STATUS_OPTIONS:
-                if dados_para_salvar.get("status") is not None: # Apenas mostra erro se um valor inválido for selecionado
+                if dados_para_salvar.get("status") is not None:
                     error_text_in_dialog.value = "Status inválido para este usuário."; error_text_in_dialog.visible = True
                     dlg.content.update(); return
             
@@ -373,16 +373,16 @@ def main(page: ft.Page):
         top=420, left=40, right=40, height=310, visible=False 
     )
 
+    # <<<< POSIÇÃO CORRIGIDA AQUI >>>>
     dev_text = ft.Container(
         content=ft.Text(
             "Desenvolvido por Silas Fonseca",
-            color="white",  # <<< CORREÇÃO APLICADA AQUI
+            color="white",
             weight=ft.FontWeight.BOLD,
             size=16,
         ),
-        bottom=235,
-        right=180,
-        alignment=ft.alignment.center_right
+        bottom=30, # Margem pequena para o fundo
+        right=40,  # Margem pequena para a direita
     )
 
     email_input = ft.TextField(label="Usuário", width=300, autofocus=True)
@@ -436,6 +436,7 @@ def main(page: ft.Page):
         bottom=150, left=0, right=0
     )
     
+    # <<<< LÓGICA DE TEXTO SIMPLIFICADA AQUI >>>>
     page.add(
         ft.Stack([
             bg_image,
@@ -443,7 +444,7 @@ def main(page: ft.Page):
             action_panel,
             counter_panel,
             table_panel,
-            dev_text
+            dev_text # Adiciona o texto. Ele ficará visível em ambas as telas.
         ])
     )
     
