@@ -52,7 +52,6 @@ COLUMN_WIDTHS = {
 }
 TABLE_WIDTH = sum(COLUMN_WIDTHS.values())
 
-# NOVO: Opções de status permitidas para o usuário da KLV
 KLV_STATUS_OPTIONS = ["KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada"]
 
 def main(page: ft.Page):
@@ -63,7 +62,6 @@ def main(page: ft.Page):
     
     LIMITED_USERS = {"aline.mendes@servitecbrasil.com.br"}
 
-    # --- Variáveis de Estado ---
     itens_selecionados = []
     active_filters = {}
     header_controls = {}
@@ -222,7 +220,6 @@ def main(page: ft.Page):
         except Exception as ex:
             exibir_dialog(ft.AlertDialog(title=ft.Text("Erro ao carregar dados"), content=ft.Text(str(ex))))
 
-    # --- Criação do Cabeçalho com Filtros ---
     header_row_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"])]
     for col in COLUNAS:
         filter_icon = ft.IconButton(
@@ -252,8 +249,7 @@ def main(page: ft.Page):
 
     def abrir_formulario(modo="add"):
         limited = is_limited_user()
-
-        valores = {}; 
+        valores = {}
         if modo == "edit":
             if not itens_selecionados: return
             valores = itens_selecionados[0]["data"]
@@ -266,14 +262,11 @@ def main(page: ft.Page):
         for c in campos_visiveis:
             valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
             control_criado = None
-            
-            # ATUALIZADO: Lógica para o campo "status" para usuários limitados
             if limited and modo == "edit" and c == "status":
-                # Mostra apenas as opções permitidas para KLV
                 control_criado = ft.Dropdown(
                     label=COLUNAS_LABEL.get(c,c), 
                     options=[ft.dropdown.Option(opt) for opt in KLV_STATUS_OPTIONS], 
-                    value=valor_str if valor_str in KLV_STATUS_OPTIONS else None, # Garante que o valor atual, se for KLV, apareça
+                    value=valor_str if valor_str in KLV_STATUS_OPTIONS else None,
                     width=450
                 )
             elif c in DROPDOWN_OPTIONS:
@@ -281,7 +274,6 @@ def main(page: ft.Page):
             else:
                 control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
             
-            # ATUALIZADO: Desabilita campos, exceto 'observacoes' e 'status' para usuários limitados em modo edição
             if modo == "edit" and limited and c not in ["observacoes", "status"]:
                 control_criado.disabled = True
             
@@ -294,26 +286,25 @@ def main(page: ft.Page):
             dados_formulario['modificado_por'] = page.session.get('user_email')
 
             if modo == "edit" and is_limited_user():
-                # ATUALIZADO: Permite salvar 'status' e 'observacoes'
                 dados_para_salvar = {
                     "status": dados_formulario.get("status"),
                     "observacoes": dados_formulario.get("observacoes"),
                     "modificado_por": dados_formulario.get("modificado_por")
                 }
-            else: # Usuário não limitado ou modo "add"
+            else:
                 dados_para_salvar = dados_formulario
             
-            # Validar status para usuário limitado
             if is_limited_user() and modo == "edit" and dados_para_salvar.get("status") not in KLV_STATUS_OPTIONS:
-                error_text_in_dialog.value = "Status inválido para este usuário."; error_text_in_dialog.visible = True
-                dlg.content.update(); return
-
-            if not dados_para_salvar.get("patrimonio") and not is_limited_user():
+                if dados_para_salvar.get("status") is not None: # Apenas mostra erro se um valor inválido for selecionado
+                    error_text_in_dialog.value = "Status inválido para este usuário."; error_text_in_dialog.visible = True
+                    dlg.content.update(); return
+            
+            if not dados_formulario.get("patrimonio") and not is_limited_user():
                 error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
                 dlg.content.update(); return
+
             try:
                 if modo == "add":
-                    # Usuários limitados não podem adicionar novos itens
                     if is_limited_user():
                         error_text_in_dialog.value = "Usuários com acesso limitado não podem adicionar novos itens."; error_text_in_dialog.visible = True
                         dlg.content.update(); return
@@ -337,7 +328,6 @@ def main(page: ft.Page):
     def excluir_selecionado(e):
         if not itens_selecionados: return
         patrimonios_para_excluir = [item["data"]["patrimonio"] for item in itens_selecionados]
-        
         confirm_dlg = ft.AlertDialog()
         def confirmar(ev):
             try:
@@ -356,7 +346,6 @@ def main(page: ft.Page):
         atualizar_icones_filtro()
         carregar_dados()
 
-    # --- UI Principal ---
     add_btn = ft.ElevatedButton("Adicionar Novo", on_click=lambda e: abrir_formulario("add"))
     edit_btn = ft.ElevatedButton("Editar Selecionado", disabled=True, on_click=lambda e: abrir_formulario("edit"))
     delete_btn = ft.ElevatedButton("Excluir Selecionado", disabled=True, on_click=excluir_selecionado)
@@ -364,60 +353,38 @@ def main(page: ft.Page):
     atualizar_btn = ft.ElevatedButton("Atualizar", icon="refresh", on_click=carregar_dados)
     
     action_panel = ft.Container(
-        content=ft.Row(
-            [add_btn, edit_btn, delete_btn, limpar_btn, atualizar_btn], 
-            spacing=10, 
-            wrap=True
-        ),
+        content=ft.Row([add_btn, edit_btn, delete_btn, limpar_btn, atualizar_btn], spacing=10, wrap=True),
         padding=20, bgcolor="white", border_radius=8,
-        top=40, left=40,
-        visible=False 
+        top=40, left=40, visible=False 
     )
     
     counter_panel = ft.Container(
         content=ft.Column(
-            [
-                ft.Text("Total de Equipamentos", color="black54", size=12),
-                total_count_text,
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=2,
+            [ft.Text("Total de Equipamentos", color="black54", size=12), total_count_text],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2
         ),
-        padding=20,
-        bgcolor="white",
-        border_radius=8,
-        width=220,
-        top=40,
-        right=40,
-        visible=False
+        padding=20, bgcolor="white", border_radius=8,
+        width=220, top=40, right=40, visible=False
     )
     
     table_panel = ft.Container(
-        content=ft.Row(
-            [ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], 
-            scroll=ft.ScrollMode.ALWAYS, 
-        ),
+        content=ft.Row([ft.Column([header, body_list], width=TABLE_WIDTH, expand=True)], scroll=ft.ScrollMode.ALWAYS),
         bgcolor="white", border_radius=8, padding=10,
-        top=420, left=40, right=40, height=310,
-        visible=False 
+        top=420, left=40, right=40, height=310, visible=False 
     )
 
-    # NOVO: Texto "Desenvolvido por Silas Fonseca"
     dev_text = ft.Container(
         content=ft.Text(
             "Desenvolvido por Silas Fonseca",
-            color=ft.colors.WHITE, # Ou a cor exata da sua imagem, se souber o código hex
-            weight=ft.FontWeight.BOLD, # Ajuste conforme a fonte da imagem
-            size=16, # Ajuste conforme a fonte da imagem
+            color="white",  # <<< CORREÇÃO APLICADA AQUI
+            weight=ft.FontWeight.BOLD,
+            size=16,
         ),
-        # Posição aproximada baseada na imagem
-        bottom=235, # Ajuste este valor para mover para cima/baixo
-        right=180, # Ajuste este valor para mover para esquerda/direita
-        alignment=ft.alignment.center_right # Alinha o texto à direita do container
+        bottom=235,
+        right=180,
+        alignment=ft.alignment.center_right
     )
 
-
-    # --- UI de Login ---
     email_input = ft.TextField(label="Usuário", width=300, autofocus=True)
     password_input = ft.TextField(label="Senha", password=True, can_reveal_password=True, width=300, on_submit=lambda e: handle_login(e))
     lembrar_me_checkbox = ft.Checkbox(label="Lembrar-me")
@@ -452,32 +419,21 @@ def main(page: ft.Page):
     login_form = ft.Container(
         content=ft.Column(
             [
-                ft.Text("Login", size=30),
-                email_input,
-                password_input,
-                lembrar_me_checkbox,
-                ft.ElevatedButton("Entrar", on_click=handle_login),
-                error_text
+                ft.Text("Login", size=30), email_input, password_input, 
+                lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login), error_text
             ],
-            spacing=15,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER
         ),
-        width=400,
-        height=400,
-        padding=40,
-        border_radius=10,
-        bgcolor="white",
+        width=400, height=400, padding=40,
+        border_radius=10, bgcolor="white",
         shadow=ft.BoxShadow(blur_radius=10, color="black26"),
     )
     
     login_view = ft.Container(
         content=login_form, 
         alignment=ft.alignment.center,
-        expand=True,
-        visible=True,
-        bottom=150,
-        left=0,
-        right=0
+        expand=True, visible=True,
+        bottom=150, left=0, right=0
     )
     
     page.add(
@@ -487,7 +443,7 @@ def main(page: ft.Page):
             action_panel,
             counter_panel,
             table_panel,
-            dev_text # ADICIONADO: A frase "Desenvolvido por Silas Fonseca"
+            dev_text
         ])
     )
     
