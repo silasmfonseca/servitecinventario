@@ -4,22 +4,34 @@ import os
 import sys
 from datetime import datetime
 import pytz
+import locale
+
+# --- Configuração de Localização para Moeda ---
+try:
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+except locale.Error:
+    print("Locale pt_BR.UTF-8 não disponível. A formatação de moeda pode não funcionar como esperado.")
 
 # --- SUPABASE (Lendo do Ambiente do Render) ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Constantes Completas do seu código original ---
+# --- Constantes Atualizadas ---
 COLUNAS = [
-    "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", "condicao",
-    "tipo_computador", "computador_liga", "hd", "hd_modelo", "hd_tamanho",
+    "patrimonio", "marca", "modelo", "numero_serie", "proprietario", "status", 
+    "valor_orcamento", "status_orcamento", "descricao_orcamento",
+    "condicao", "tipo_computador", "computador_liga", "hd", "hd_modelo", "hd_tamanho",
     "ram_tipo", "ram_tamanho", "bateria", "teclado_funciona",
     "observacoes", "modificado_em", "modificado_por"
 ]
 COLUNAS_LABEL = {
     "patrimonio": "Patrimônio", "marca": "Marca", "modelo": "Modelo", "numero_serie": "Nº de Série",
-    "proprietario": "Proprietário", "status": "Status", "condicao": "Condição da Carcaça",
+    "proprietario": "Proprietário", "status": "Status", 
+    "valor_orcamento": "Valor Orçamento",
+    "status_orcamento": "Status Orçamento",
+    "descricao_orcamento": "Descrição do Orçamento",
+    "condicao": "Condição da Carcaça",
     "tipo_computador": "Tipo de Computador", "computador_liga": "Computador Liga?",
     "hd": "Tipo HD/SSD", "hd_modelo": "Modelo HD/SSD", "hd_tamanho": "Tamanho HD/SSD",
     "ram_tipo": "Tipo Memória RAM", "ram_tamanho": "Tamanho Memória RAM",
@@ -30,6 +42,7 @@ LABEL_TO_COL = {v: k for k, v in COLUNAS_LABEL.items()}
 DROPDOWN_OPTIONS = {
     "proprietario": ["Capital Company", "Conmedi - Jardins", "Conmedi - Mauá", "Conmedi - Osaco", "Conmedi - Paulista", "Conmedi - Ribeirão Pires", "Conmedi - Santo Amaro", "Conmedi - Santo André", "Conmedi - São Caetano", "Conmedi - Vila Matilde", "Engrecon", "Engrecon - BPN", "Inova Contabildiade", "MIMO", "Pro Saúde", "Rede Gaya", "Quattro Construtora", "Sealset", "Servitec - Locação", "SL Assessoria", "Super Brilho"],
     "status": ["Está na Servitec", "KLV/ Aguardando aprovação", "KLV / Reparando", "KLV / Aguardando Retirada", "Está com o proprietário"],
+    "status_orcamento": ["Aguardando orçamento", "Aprovado", "Negado"],
     "marca": ["Apple", "Acer", "Dell", "HP", "Lenovo", "Positivo", "Samsung"],
     "condicao": ["Nova", "Estado de Nova", "Estado de Nova (Com avarias)", "Boa", "Quebrada"],
     "tipo_computador": ["Desktop", "Notebook"],
@@ -43,7 +56,11 @@ DROPDOWN_OPTIONS = {
 }
 COLUMN_WIDTHS = {
     "checkbox": 50, "patrimonio": 120, "marca": 150, "modelo": 150, "numero_serie": 150,
-    "proprietario": 200, "status": 200, "condicao": 200, "tipo_computador": 180,
+    "proprietario": 200, "status": 200, 
+    "valor_orcamento": 150,
+    "status_orcamento": 200,
+    "descricao_orcamento": 250,
+    "condicao": 200, "tipo_computador": 180,
     "computador_liga": 160,
     "hd": 120, "hd_modelo": 150, "hd_tamanho": 150, "ram_tipo": 150,
     "ram_tamanho": 200,
@@ -60,16 +77,30 @@ def main(page: ft.Page):
     page.padding = 0
     page.bgcolor = "#f0f2f5"
     
-    LIMITED_USERS = {"aline.mendes@servitecbrasil.com.br"}
+    # ATUALIZADO: Sistema de papéis (Roles)
+    USER_ROLES = {
+        "aline.mendes@servitecbrasil.com.br": "KLV",
+        "victor.suarez@servitecbrasil.com.br": "ORCAMENTO"
+    }
 
+    # --- Variáveis de Estado ---
     itens_selecionados = []
     active_filters = {}
     header_controls = {}
     total_count_text = ft.Text("0", size=24, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
 
-    def is_limited_user():
+    def get_user_role():
         user_email = page.session.get("user_email")
-        return user_email in LIMITED_USERS
+        return USER_ROLES.get(user_email, "ADMIN")
+
+    def format_currency(value_str):
+        if not value_str:
+            return ""
+        try:
+            value_float = float(str(value_str).replace('.', '').replace(',', '.'))
+            return locale.currency(value_float, grouping=True, symbol='R$')
+        except (ValueError, TypeError):
+            return value_str
 
     def salvar_credenciais(email, password):
         page.client_storage.set("auth.email", email.strip())
@@ -102,10 +133,12 @@ def main(page: ft.Page):
         
     def atualizar_estado_botoes():
         num_selecionados = len(itens_selecionados)
+        role = get_user_role()
         edit_btn.disabled = (num_selecionados != 1)
-        delete_btn.disabled = (num_selecionados == 0) or is_limited_user()
+        # Apenas ADMIN pode deletar
+        delete_btn.disabled = (num_selecionados == 0) or (role != "ADMIN")
         page.update()
-
+    
     def selecionar_item(item_data, checkbox_control):
         nonlocal itens_selecionados
         item_info = {"data": item_data}
@@ -114,17 +147,9 @@ def main(page: ft.Page):
         else:
             itens_selecionados = [item for item in itens_selecionados if item["data"]["patrimonio"] != item_data["patrimonio"]]
         atualizar_estado_botoes()
-
-    def formatar_data(iso_string):
-        if not iso_string: return ""
-        try:
-            utc_dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
-            sao_paulo_tz = pytz.timezone("America/Sao_Paulo")
-            return utc_dt.astimezone(sao_paulo_tz).strftime("%d/%m/%Y %H:%M")
-        except: return iso_string
-        
-    def mostrar_observacao_completa(e, observacao_texto):
-        dlg = ft.AlertDialog(modal=True, title=ft.Text("Observação Completa"), content=ft.Text(observacao_texto, selectable=True), actions=[ft.TextButton("Fechar", on_click=lambda e: fechar_dialog(dlg))], actions_alignment=ft.MainAxisAlignment.END)
+    
+    def mostrar_observacao_completa(e, titulo, texto):
+        dlg = ft.AlertDialog(modal=True, title=ft.Text(titulo), content=ft.Text(texto, selectable=True), actions=[ft.TextButton("Fechar", on_click=lambda e: fechar_dialog(dlg))], actions_alignment=ft.MainAxisAlignment.END)
         exibir_dialog(dlg)
 
     def atualizar_icones_filtro():
@@ -202,19 +227,27 @@ def main(page: ft.Page):
                 for c in COLUNAS:
                     valor = item.get(c, "")
                     valor_str = str(valor) if valor is not None else ""
+                    
                     if c == "modificado_em": valor_str = formatar_data(valor_str)
+                    if c == "valor_orcamento": valor_str = format_currency(valor_str)
                     
                     cell_content = ft.Text(valor_str, no_wrap=True, size=12)
-                    if c == "observacoes" and valor_str:
+                    
+                    if c in ["observacoes", "descricao_orcamento"] and valor_str:
                         texto_display = (valor_str[:30] + '...') if len(valor_str) > 30 else valor_str
                         cell_content = ft.Container(
                             content=ft.Text(texto_display, no_wrap=True, size=12, italic=True),
                             tooltip=valor_str,
-                            on_click=lambda e, texto_completo=valor_str: mostrar_observacao_completa(e, texto_completo)
+                            on_click=lambda e, title=COLUNAS_LABEL[c], text=valor_str: mostrar_observacao_completa(e, title, text)
                         )
+                        
                     row_controls.append(ft.Container(width=COLUMN_WIDTHS.get(c, 150), content=cell_content, alignment=ft.alignment.center, border=ft.border.only(left=ft.border.BorderSide(1, "#dee2e6"))))
                 
-                row_color = "#e9ecef" if i % 2 != 0 else "white"
+                if item.get("status_orcamento") == "Aprovado":
+                    row_color = "#e8f5e9"
+                else:
+                    row_color = "#e9ecef" if i % 2 != 0 else "white"
+                    
                 body_list.controls.append(ft.Container(content=ft.Row(controls=row_controls, spacing=0), bgcolor=row_color))
             page.update()
         except Exception as ex:
@@ -223,32 +256,20 @@ def main(page: ft.Page):
     header_row_controls = [ft.Container(width=COLUMN_WIDTHS["checkbox"])]
     for col in COLUNAS:
         filter_icon = ft.IconButton(
-            icon="filter_alt_outlined",
-            icon_size=16,
-            icon_color="black26",
-            on_click=lambda e, c=col: abrir_dialog_filtro(e, c),
-            tooltip=f"Filtrar por {COLUNAS_LABEL.get(col, col)}"
+            icon="filter_alt_outlined", icon_size=16, icon_color="black26",
+            on_click=lambda e, c=col: abrir_dialog_filtro(e, c), tooltip=f"Filtrar por {COLUNAS_LABEL.get(col, col)}"
         )
-        header_controls[col] = {
-            "text": ft.Text(COLUNAS_LABEL.get(col, col), weight=ft.FontWeight.BOLD, color="black54"),
-            "icon": filter_icon
-        }
+        header_controls[col] = {"text": ft.Text(COLUNAS_LABEL.get(col, col), weight=ft.FontWeight.BOLD, color="black54"), "icon": filter_icon}
         header_row_controls.append(
             ft.Container(
-                content=ft.Row(
-                    controls=[header_controls[col]["text"], header_controls[col]["icon"]],
-                    spacing=2,
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER
-                ),
-                width=COLUMN_WIDTHS.get(col, 150),
-                alignment=ft.alignment.center
+                content=ft.Row([header_controls[col]["text"], header_controls[col]["icon"]], spacing=2, alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                width=COLUMN_WIDTHS.get(col, 150), alignment=ft.alignment.center
             )
         )
     header = ft.Container(content=ft.Row(controls=header_row_controls, spacing=0), bgcolor="#f8f9fa", height=40)
 
     def abrir_formulario(modo="add"):
-        limited = is_limited_user()
+        role = get_user_role()
         valores = {}
         if modo == "edit":
             if not itens_selecionados: return
@@ -262,19 +283,32 @@ def main(page: ft.Page):
         for c in campos_visiveis:
             valor_atual = valores.get(c); valor_str = "" if valor_atual is None else str(valor_atual)
             control_criado = None
-            if limited and modo == "edit" and c == "status":
-                control_criado = ft.Dropdown(
-                    label=COLUNAS_LABEL.get(c,c), 
-                    options=[ft.dropdown.Option(opt) for opt in KLV_STATUS_OPTIONS], 
-                    value=valor_str if valor_str in KLV_STATUS_OPTIONS else None,
-                    width=450
-                )
-            elif c in DROPDOWN_OPTIONS:
-                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
+            
+            opcoes_dropdown = DROPDOWN_OPTIONS.get(c, [])
+            if role == "KLV" and c == "status":
+                opcoes_dropdown = KLV_STATUS_OPTIONS
+
+            if c in DROPDOWN_OPTIONS:
+                control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in opcoes_dropdown], value=valor_str if valor_str in opcoes_dropdown else None, width=450)
             else:
                 control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
-            
-            if modo == "edit" and limited and c not in ["observacoes", "status"]:
+
+            # Desabilita campos com base nas novas regras de permissão
+            control_criado.disabled = True # Começa desabilitado
+            if modo == "add" and role == "ADMIN": # Admin pode editar tudo no modo ADD
+                control_criado.disabled = False
+            elif modo == "edit":
+                if (role == "ADMIN" and c not in ["valor_orcamento", "status_orcamento", "descricao_orcamento"]):
+                    control_criado.disabled = False
+                elif (role == "KLV" and c in ["status", "valor_orcamento", "descricao_orcamento", "observacoes"]):
+                    control_criado.disabled = False
+                elif (role == "ORCAMENTO" and c != "status_orcamento"):
+                    control_criado.disabled = False # Victor edita tudo, exceto o campo que só ele pode
+                elif (role == "ORCAMENTO" and c == "status_orcamento"):
+                    control_criado.disabled = False
+
+            # Patrimônio nunca pode ser editado
+            if modo == "edit" and c == "patrimonio":
                 control_criado.disabled = True
             
             campos[c] = control_criado
@@ -282,38 +316,25 @@ def main(page: ft.Page):
         
         dlg = ft.AlertDialog()
         def salvar(e):
-            dados_formulario = {c: campos[c].value for c in campos}
+            dados_formulario = {c: campos[c].value for c in campos if not campos[c].disabled}
             dados_formulario['modificado_por'] = page.session.get('user_email')
+            
+            dados_para_salvar = {k: v for k, v in dados_formulario.items() if v is not None}
 
-            if modo == "edit" and is_limited_user():
-                dados_para_salvar = {
-                    "status": dados_formulario.get("status"),
-                    "observacoes": dados_formulario.get("observacoes"),
-                    "modificado_por": dados_formulario.get("modificado_por")
-                }
-            else:
-                dados_para_salvar = dados_formulario
-            
-            if is_limited_user() and modo == "edit" and dados_para_salvar.get("status") not in KLV_STATUS_OPTIONS:
-                if dados_para_salvar.get("status") is not None:
-                    error_text_in_dialog.value = "Status inválido para este usuário."; error_text_in_dialog.visible = True
-                    dlg.content.update(); return
-            
-            if not dados_formulario.get("patrimonio") and not is_limited_user():
+            if modo == "add":
+                dados_para_salvar = {c: campos[c].value for c in campos}
+                dados_para_salvar["status_orcamento"] = "Aguardando orçamento"
+                dados_para_salvar['modificado_por'] = page.session.get('user_email')
+
+            if get_user_role() == "ADMIN" and modo == "add" and not dados_para_salvar.get("patrimonio"):
                 error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
                 dlg.content.update(); return
-
+            
             try:
                 if modo == "add":
-                    if is_limited_user():
-                        error_text_in_dialog.value = "Usuários com acesso limitado não podem adicionar novos itens."; error_text_in_dialog.visible = True
-                        dlg.content.update(); return
                     supabase.table("inventario").insert(dados_para_salvar).execute()
                 else:
                     patrimonio_original = valores.get("patrimonio")
-                    if "patrimonio" in dados_formulario and str(dados_formulario.get("patrimonio")) != str(patrimonio_original) and not is_limited_user():
-                        error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
-                        dlg.content.update(); return
                     supabase.table("inventario").update(dados_para_salvar).eq("patrimonio", patrimonio_original).execute()
                 fechar_dialog(dlg); carregar_dados()
             except Exception as ex:
@@ -321,7 +342,7 @@ def main(page: ft.Page):
                 dlg.content.update()
 
         dlg.modal=True; dlg.title=ft.Text("Adicionar Equipamento" if modo == "add" else "Editar Equipamento")
-        dlg.content=ft.Column(lista_de_controles, scroll="auto", height=400, width=500, spacing=10)
+        dlg.content=ft.Column(lista_de_controles, scroll="auto", height=500, width=500, spacing=10)
         dlg.actions=[ft.TextButton("Cancelar", on_click=lambda e: fechar_dialog(dlg)), ft.ElevatedButton("Salvar", on_click=salvar)]
         dlg.actions_alignment="end"; exibir_dialog(dlg)
 
@@ -359,10 +380,7 @@ def main(page: ft.Page):
     )
     
     counter_panel = ft.Container(
-        content=ft.Column(
-            [ft.Text("Total de Equipamentos", color="black54", size=12), total_count_text],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2
-        ),
+        content=ft.Column([ft.Text("Total de Equipamentos", color="black54", size=12), total_count_text], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
         padding=20, bgcolor="white", border_radius=8,
         width=220, top=40, right=40, visible=False
     )
@@ -373,16 +391,9 @@ def main(page: ft.Page):
         top=420, left=40, right=40, height=310, visible=False 
     )
 
-    # <<<< POSICIONAMENTO RESPONSIVO APLICADO AQUI >>>>
     dev_text = ft.Container(
-        content=ft.Text(
-            "Desenvolvido por Silas Fonseca",
-            color="white",
-            weight=ft.FontWeight.BOLD,
-            size=16,
-        ),
-        alignment=ft.alignment.bottom_right,      # Ancora o container no canto inferior direito
-        margin=ft.margin.only(bottom=30, right=40) # Aplica uma margem a partir do canto
+        content=ft.Text("Desenvolvido por Silas Fonseca", color="white", weight=ft.FontWeight.BOLD, size=16),
+        alignment=ft.alignment.bottom_right, margin=ft.margin.only(bottom=30, right=40)
     )
 
     email_input = ft.TextField(label="Usuário", width=300, autofocus=True)
@@ -400,9 +411,9 @@ def main(page: ft.Page):
                 if lembrar_me_checkbox.value: salvar_credenciais(email, password)
                 else: apagar_credenciais()
                 
-                if is_limited_user():
+                role = get_user_role()
+                if role == "KLV":
                     add_btn.disabled = True
-                    delete_btn.disabled = True
                 
                 login_view.visible = False
                 action_panel.visible = True
@@ -417,13 +428,7 @@ def main(page: ft.Page):
             page.update()
 
     login_form = ft.Container(
-        content=ft.Column(
-            [
-                ft.Text("Login", size=30), email_input, password_input, 
-                lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login), error_text
-            ],
-            spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER
-        ),
+        content=ft.Column([ft.Text("Login", size=30), email_input, password_input, lembrar_me_checkbox, ft.ElevatedButton("Entrar", on_click=handle_login), error_text], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
         width=400, height=400, padding=40,
         border_radius=10, bgcolor="white",
         shadow=ft.BoxShadow(blur_radius=10, color="black26"),
