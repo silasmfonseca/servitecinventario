@@ -4,13 +4,7 @@ import os
 import sys
 from datetime import datetime
 import pytz
-import locale
-
-# --- Configuração de Localização para Moeda ---
-try:
-    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-except locale.Error:
-    print("Locale pt_BR.UTF-8 não disponível. A formatação de moeda pode não funcionar como esperado.")
+# locale não é mais necessário para a formatação de moeda
 
 # --- SUPABASE (Lendo do Ambiente do Render) ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -90,17 +84,33 @@ def main(page: ft.Page):
     def get_user_role():
         user_email = page.session.get("user_email")
         return USER_ROLES.get(user_email, "ADMIN")
-
+    
+    # <<< FUNÇÃO DE MOEDA CORRIGIDA AQUI >>>
     def format_currency(value_str):
         if not value_str:
             return ""
         try:
-            value_float = float(str(value_str).replace('.', '').replace(',', '.'))
-            return locale.currency(value_float, grouping=True, symbol='R$')
+            # Garante que estamos lidando com uma string para manipulação
+            s = str(value_str).strip()
+            # Converte para um formato numérico que o float entende (troca , por .)
+            s = s.replace(',', '.')
+            # Converte para float
+            value_float = float(s)
+            # Formata manualmente para o padrão brasileiro
+            # :.2f -> duas casas decimais
+            # :, -> usa separador de milhar do locale padrão (,)
+            formatted_str = f'R$ {value_float:,.2f}'
+            # Troca os separadores para o padrão brasileiro
+            # Troca vírgula por um caractere temporário
+            formatted_str = formatted_str.replace(',', 'v')
+            # Troca ponto por vírgula
+            formatted_str = formatted_str.replace('.', ',')
+            # Troca o caractere temporário por ponto
+            formatted_str = formatted_str.replace('v', '.')
+            return formatted_str
         except (ValueError, TypeError):
-            return value_str
-    
-    # <<< FUNÇÃO CORRIGIDA/READICIONADA AQUI >>>
+            return value_str # Retorna o valor original se não for um número
+
     def formatar_data(iso_string):
         if not iso_string: return ""
         try:
@@ -143,7 +153,6 @@ def main(page: ft.Page):
         role = get_user_role()
         edit_btn.disabled = (num_selecionados != 1)
         
-        # Apenas ADMIN e ORCAMENTO podem deletar
         can_delete = role in ["ADMIN", "ORCAMENTO"]
         delete_btn.disabled = (num_selecionados == 0) or not can_delete
         page.update()
@@ -302,12 +311,14 @@ def main(page: ft.Page):
             else:
                 control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
 
-            if modo == "add" and c == "status_orcamento":
-                control_criado.value = "Aguardando orçamento"
-                control_criado.disabled = True # Bloqueia no modo ADD
-
+            if modo == "add":
+                if c == "status_orcamento":
+                    control_criado.value = "Aguardando orçamento"
+                    control_criado.disabled = True
+                if role != "ADMIN":
+                    control_criado.disabled = True
+            
             if modo == "edit":
-                # Lógica de permissão corrigida
                 if role == "ADMIN":
                     if c in ["valor_orcamento", "status_orcamento", "descricao_orcamento"]:
                         control_criado.disabled = True
@@ -318,23 +329,19 @@ def main(page: ft.Page):
                     if c != "status_orcamento":
                         control_criado.disabled = True
             
-            if modo == "add" and role != "ADMIN":
-                 control_criado.disabled = True
-
-            if modo == "edit" and c == "patrimonio":
-                control_criado.disabled = True
+            if c == "patrimonio": # Patrimônio nunca pode ser editado
+                if modo == "edit" or (modo == "add" and role != "ADMIN"):
+                    control_criado.disabled = True
             
             campos[c] = control_criado
             lista_de_controles.append(control_criado)
         
         dlg = ft.AlertDialog()
         def salvar(e):
-            # Salva apenas os campos que não estão desabilitados
             dados_para_salvar = {c: campos[c].value for c in campos if not campos[c].disabled}
             dados_para_salvar['modificado_por'] = page.session.get('user_email')
             
             if modo == "add":
-                # Pega todos os valores para o modo ADD
                 dados_para_salvar = {c: campos[c].value for c in campos}
                 dados_para_salvar["status_orcamento"] = "Aguardando orçamento"
                 dados_para_salvar['modificado_por'] = page.session.get('user_email')
@@ -424,7 +431,7 @@ def main(page: ft.Page):
                 else: apagar_credenciais()
                 
                 role = get_user_role()
-                if role == "KLV": # Apenas Aline não pode adicionar
+                if role == "KLV":
                     add_btn.disabled = True
                 
                 login_view.visible = False
