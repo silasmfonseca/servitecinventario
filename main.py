@@ -57,12 +57,20 @@ def main(page: ft.Page):
     page.theme_mode = "light"
     page.padding = 0
     page.bgcolor = "#f0f2f5"
+    
+    # NOVO: Lista de usuários com acesso limitado
+    LIMITED_USERS = {"aline.mendes@servitecbrasil.com.br"}
 
     # --- Variáveis de Estado ---
     itens_selecionados = []
     active_filters = {}
     header_controls = {}
     total_count_text = ft.Text("0", size=24, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
+
+    # NOVO: Função para verificar se o usuário é limitado
+    def is_limited_user():
+        user_email = page.session.get("user_email")
+        return user_email in LIMITED_USERS
 
     def salvar_credenciais(email, password):
         page.client_storage.set("auth.email", email.strip())
@@ -96,7 +104,8 @@ def main(page: ft.Page):
     def atualizar_estado_botoes():
         num_selecionados = len(itens_selecionados)
         edit_btn.disabled = (num_selecionados != 1)
-        delete_btn.disabled = (num_selecionados == 0)
+        # Se for usuário limitado, o botão de deletar sempre estará desabilitado
+        delete_btn.disabled = (num_selecionados == 0) or is_limited_user()
         page.update()
 
     def selecionar_item(item_data, checkbox_control):
@@ -242,6 +251,9 @@ def main(page: ft.Page):
     header = ft.Container(content=ft.Row(controls=header_row_controls, spacing=0), bgcolor="#f8f9fa", height=40)
 
     def abrir_formulario(modo="add"):
+        # ATUALIZADO: Verifica o tipo de usuário
+        limited = is_limited_user()
+
         valores = {}; 
         if modo == "edit":
             if not itens_selecionados: return
@@ -259,6 +271,11 @@ def main(page: ft.Page):
                 control_criado = ft.Dropdown(label=COLUNAS_LABEL.get(c,c), options=[ft.dropdown.Option(opt) for opt in DROPDOWN_OPTIONS.get(c, [])], value=valor_str if valor_str in DROPDOWN_OPTIONS.get(c, []) else None, width=450)
             else:
                 control_criado = ft.TextField(label=COLUNAS_LABEL.get(c,c), value=valor_str, width=450)
+            
+            # ATUALIZADO: Desabilita campos para usuário limitado no modo de edição
+            if modo == "edit" and limited and c != "observacoes":
+                control_criado.disabled = True
+            
             campos[c] = control_criado
             lista_de_controles.append(control_criado)
         
@@ -266,17 +283,28 @@ def main(page: ft.Page):
         def salvar(e):
             dados_formulario = {c: campos[c].value for c in campos}
             dados_formulario['modificado_por'] = page.session.get('user_email')
-            if not dados_formulario.get("patrimonio"):
+
+            # ATUALIZADO: Define quais dados podem ser salvos pelo usuário limitado
+            if modo == "edit" and is_limited_user():
+                dados_para_salvar = {
+                    "observacoes": dados_formulario.get("observacoes"),
+                    "modificado_por": dados_formulario.get("modificado_por")
+                }
+            else:
+                dados_para_salvar = dados_formulario
+
+            if not dados_para_salvar.get("patrimonio") and not is_limited_user():
                 error_text_in_dialog.value = "O campo 'Patrimônio' é obrigatório."; error_text_in_dialog.visible = True
                 dlg.content.update(); return
             try:
-                if modo == "add": supabase.table("inventario").insert(dados_formulario).execute()
+                if modo == "add":
+                    supabase.table("inventario").insert(dados_para_salvar).execute()
                 else:
                     patrimonio_original = valores.get("patrimonio")
-                    if str(dados_formulario.get("patrimonio")) != str(patrimonio_original):
+                    if "patrimonio" in dados_para_salvar and str(dados_para_salvar.get("patrimonio")) != str(patrimonio_original):
                         error_text_in_dialog.value = "Não é permitido alterar o Patrimônio na edição."; error_text_in_dialog.visible = True
                         dlg.content.update(); return
-                    supabase.table("inventario").update(dados_formulario).eq("patrimonio", patrimonio_original).execute()
+                    supabase.table("inventario").update(dados_para_salvar).eq("patrimonio", patrimonio_original).execute()
                 fechar_dialog(dlg); carregar_dados()
             except Exception as ex:
                 error_text_in_dialog.value = f"Erro ao salvar: {ex}"; error_text_in_dialog.visible = True
@@ -371,6 +399,16 @@ def main(page: ft.Page):
                 if lembrar_me_checkbox.value: salvar_credenciais(email, password)
                 else: apagar_credenciais()
                 
+                # ATUALIZADO: Desabilita botões para usuário limitado
+                if is_limited_user():
+                    add_btn.disabled = True
+                    delete_btn.disabled = True
+                    # O botão Editar é controlado pela seleção, então não mexemos
+                    # Os botões de filtro e atualização podem continuar ativos se desejado
+                    # Para bloquear TUDO exceto editar, descomente abaixo
+                    # limpar_btn.disabled = True
+                    # atualizar_btn.disabled = True
+                
                 login_view.visible = False
                 action_panel.visible = True
                 counter_panel.visible = True
@@ -382,8 +420,7 @@ def main(page: ft.Page):
             error_text.value = "Usuário ou senha inválidos."
             error_text.visible = True
             page.update()
-    
-    # <<< CORREÇÃO APLICADA AQUI >>>
+
     login_form = ft.Container(
         content=ft.Column(
             [
@@ -398,7 +435,7 @@ def main(page: ft.Page):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER
         ),
         width=400,
-        height=400,  # Altura fixa para garantir espaço no fundo
+        height=400,
         padding=40,
         border_radius=10,
         bgcolor="white",
